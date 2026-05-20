@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAGE — AI Scheduling Assistant</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">S</div>
+      <div>
+        <h1>SAGE</h1>
+        <p class="tagline">Talk to your schedule.</p>
+      </div>
+    </div>
+    <div class="status">
+      <span id="ws-dot" class="dot dot--offline"></span>
+      <span id="ws-text">connecting…</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="chat-pane">
+      <div id="messages" class="messages">
+        <div class="message message--bot">
+          <div class="bubble">
+            Hey! I'm <strong>SAGE</strong>. Tell me what's on your mind — a task, a meeting, an exam, anything.
+            <br /><br />
+            Try: <em>"Study calculus tomorrow from 2 to 4pm"</em> or <em>"What's on my schedule this week?"</em>
+          </div>
+        </div>
+      </div>
+      <form id="chat-form" class="chat-form">
+        <textarea
+          id="chat-input"
+          placeholder="Tell SAGE what you need to do…"
+          rows="2"
+          autofocus
+        ></textarea>
+        <button type="submit" id="send-btn">Send</button>
+      </form>
+    </section>
+
+    <section class="calendar-pane">
+      <div class="calendar-header">
+        <button id="prev-week" class="nav-btn">‹</button>
+        <h2 id="week-title">This week</h2>
+        <button id="next-week" class="nav-btn">›</button>
+        <button id="today-btn" class="today-btn">Today</button>
+      </div>
+      <div id="calendar" class="calendar"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
