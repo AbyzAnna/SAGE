@@ -151,6 +151,12 @@ a:hover { color: var(--text); }
   max-width: 640px;
   font-size: 17px;
 }
+.hero-mini {
+  margin: 16px auto 0;
+  color: var(--muted);
+  font-size: 13px;
+  opacity: 0.8;
+}
 
 .cta-row {
   display: flex;
