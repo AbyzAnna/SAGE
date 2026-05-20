@@ -550,6 +550,283 @@ User: ${message}`;
     toast("All events cleared", "ok");
   });
 
+  // ---------- voice: Web Speech API (STT + TTS) ----------
+  // Single-message dictation + full call-mode loop (listen → respond → speak → repeat).
+  const SR_CLASS = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const TTS = window.speechSynthesis;
+  const voice = {
+    supported: !!SR_CLASS && !!TTS,
+    rec: null,             // active SpeechRecognition instance
+    isListening: false,
+    isSpeaking: false,
+    inCall: false,
+    muted: false,
+    finalChunks: [],       // accumulated finalized transcripts during one listen
+    interimChunk: "",
+    silenceTimer: null,    // detects "you stopped talking, time to send"
+    target: "input",       // "input" (write to textarea) | "call" (handle inline)
+    preferredVoice: null,
+  };
+
+  // Pick a pleasant voice if available
+  function pickVoice() {
+    if (!TTS) return null;
+    const voices = TTS.getVoices() || [];
+    if (!voices.length) return null;
+    const lang = (navigator.language || "en-US").toLowerCase();
+    const score = (v) => {
+      let s = 0;
+      const name = (v.name || "").toLowerCase();
+      const vlang = (v.lang || "").toLowerCase();
+      if (vlang.startsWith(lang.slice(0,2))) s += 10;
+      if (vlang === lang) s += 5;
+      // macOS Siri-style voices are higher quality
+      if (/samantha|alex|karen|moira|tessa|daniel|google.*female/.test(name)) s += 8;
+      if (/google/.test(name)) s += 4;
+      if (v.localService) s += 2;
+      return s;
+    };
+    return voices.slice().sort((a,b) => score(b) - score(a))[0] || voices[0];
+  }
+  // Voices load asynchronously in Chrome
+  if (TTS) {
+    voice.preferredVoice = pickVoice();
+    TTS.addEventListener("voiceschanged", () => { voice.preferredVoice = pickVoice(); });
+  }
+
+  function buildRecognition(opts = {}) {
+    if (!SR_CLASS) return null;
+    const r = new SR_CLASS();
+    r.lang = navigator.language || "en-US";
+    r.interimResults = true;
+    r.continuous = !!opts.continuous;   // call mode: true; single dictation: false
+    r.maxAlternatives = 1;
+    return r;
+  }
+
+  function startListening(target) {
+    if (!voice.supported) {
+      toast("Voice input isn't supported in this browser. Try Chrome, Edge, or Safari.", "err");
+      return false;
+    }
+    if (voice.isListening) return true;
+    // Don't listen while we're speaking — would just re-hear the bot's voice
+    if (voice.isSpeaking) return false;
+
+    voice.target = target;
+    voice.finalChunks = [];
+    voice.interimChunk = "";
+    voice.rec = buildRecognition({ continuous: target === "call" });
+    if (!voice.rec) return false;
+
+    voice.rec.onstart = () => {
+      voice.isListening = true;
+      if (target === "input") {
+        $("mic-btn").classList.add("icon-btn--listening");
+        $("mic-btn").title = "Listening… click to stop";
+      } else {
+        setCallUI("listening", "Listening…");
+      }
+    };
+    voice.rec.onresult = (e) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) voice.finalChunks.push(r[0].transcript.trim());
+        else interim += r[0].transcript;
+      }
+      voice.interimChunk = interim;
+
+      const live = (voice.finalChunks.join(" ") + " " + interim).trim();
+      if (target === "input") {
+        chatInput.value = live;
+      } else {
+        $("call-transcript").textContent = live ? `"${live}"` : "";
+        // In call mode, debounce on silence (~1.5s after last result) to send
+        if (voice.silenceTimer) clearTimeout(voice.silenceTimer);
+        if (live) {
+          voice.silenceTimer = setTimeout(() => commitCallUtterance(), 1500);
+        }
+      }
+    };
+    voice.rec.onerror = (e) => {
+      console.warn("speech error", e.error);
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        toast("Microphone permission denied.", "err");
+        if (voice.inCall) endCall();
+      } else if (e.error === "no-speech") {
+        // Common in call mode; ignored, onend will restart.
+      } else if (e.error === "audio-capture") {
+        toast("No microphone found.", "err");
+        if (voice.inCall) endCall();
+      }
+    };
+    voice.rec.onend = () => {
+      voice.isListening = false;
+      $("mic-btn").classList.remove("icon-btn--listening");
+      $("mic-btn").title = "Dictate a message (click and speak)";
+
+      if (target === "input") {
+        // Single dictation: just leave the text in the input. User clicks Send.
+        return;
+      }
+
+      // Call mode: if we still have an unsent utterance, commit it
+      if (voice.inCall) {
+        const live = (voice.finalChunks.join(" ") + " " + voice.interimChunk).trim();
+        if (live && !voice.isSpeaking) {
+          commitCallUtterance();
+        } else if (!voice.isSpeaking && !voice.muted) {
+          // restart listening
+          setTimeout(() => { if (voice.inCall && !voice.muted) startListening("call"); }, 250);
+        }
+      }
+    };
+
+    try {
+      voice.rec.start();
+      return true;
+    } catch (err) {
+      console.warn("rec start failed", err);
+      return false;
+    }
+  }
+
+  function stopListening() {
+    if (voice.rec && voice.isListening) {
+      try { voice.rec.stop(); } catch {}
+    }
+  }
+
+  function speak(text, onDone) {
+    if (!TTS || !text) { onDone && onDone(); return; }
+    TTS.cancel();  // clear any queued speech
+    const utt = new SpeechSynthesisUtterance(text);
+    if (voice.preferredVoice) utt.voice = voice.preferredVoice;
+    utt.rate = 1.05;
+    utt.pitch = 1.0;
+    utt.volume = 1.0;
+    utt.onstart = () => {
+      voice.isSpeaking = true;
+      if (voice.inCall) setCallUI("speaking", "SAGE is speaking…");
+    };
+    utt.onend = () => {
+      voice.isSpeaking = false;
+      onDone && onDone();
+    };
+    utt.onerror = () => {
+      voice.isSpeaking = false;
+      onDone && onDone();
+    };
+    TTS.speak(utt);
+  }
+
+  // ---------- single-message dictation ----------
+  $("mic-btn").addEventListener("click", () => {
+    if (!voice.supported) {
+      toast("Voice input isn't supported in this browser. Try Chrome, Edge, or Safari.", "err");
+      return;
+    }
+    if (voice.isListening && voice.target === "input") {
+      stopListening();
+    } else {
+      startListening("input");
+    }
+  });
+
+  // ---------- call mode ----------
+  function setCallUI(stateName, statusText) {
+    const orb = $("call-orb");
+    orb.classList.remove("call-orb--listening","call-orb--thinking","call-orb--speaking");
+    if (stateName) orb.classList.add(`call-orb--${stateName}`);
+    const st = $("call-status");
+    st.className = "call-status" + (stateName ? ` call-status--${stateName}` : "");
+    st.textContent = statusText;
+  }
+
+  function startCall() {
+    if (!voice.supported) {
+      toast("Voice calls need Chrome, Edge, or Safari (and a microphone).", "err");
+      return;
+    }
+    voice.inCall = true;
+    voice.muted = false;
+    $("call-mute").classList.remove("muted");
+    $("call-overlay").classList.add("call-overlay--show");
+    $("call-overlay").setAttribute("aria-hidden", "false");
+    $("call-transcript").textContent = "";
+    setCallUI("speaking", "SAGE is connecting…");
+    // Greet then start listening
+    speak("Hi! I'm SAGE. Tell me what you need to schedule.", () => {
+      if (voice.inCall && !voice.muted) startListening("call");
+    });
+  }
+
+  function endCall() {
+    voice.inCall = false;
+    if (voice.silenceTimer) { clearTimeout(voice.silenceTimer); voice.silenceTimer = null; }
+    stopListening();
+    if (TTS) TTS.cancel();
+    voice.isSpeaking = false;
+    $("call-overlay").classList.remove("call-overlay--show");
+    $("call-overlay").setAttribute("aria-hidden", "true");
+    $("call-transcript").textContent = "";
+  }
+
+  async function commitCallUtterance() {
+    if (!voice.inCall) return;
+    if (voice.silenceTimer) { clearTimeout(voice.silenceTimer); voice.silenceTimer = null; }
+    const text = (voice.finalChunks.join(" ") + " " + voice.interimChunk).trim();
+    if (!text) {
+      if (!voice.muted) startListening("call");
+      return;
+    }
+    voice.finalChunks = [];
+    voice.interimChunk = "";
+    stopListening();
+
+    // Log into the chat transcript too
+    addMessage("user", escapeHtml(text));
+    setCallUI("thinking", "Thinking…");
+
+    let result;
+    try {
+      result = await handleMessage(text);
+    } catch (e) {
+      result = { reply: "Sorry, something went wrong.", created: [], updated: [], deleted: [], conflicts: [] };
+    }
+    addMessage("bot", escapeHtml(result.reply || "Done."));
+    if (result.conflicts?.length) {
+      result.conflicts.forEach(c => toast(c, "warn"));
+    }
+
+    if (!voice.inCall) return;  // user may have hung up
+    speak(result.reply || "Done.", () => {
+      if (voice.inCall && !voice.muted) startListening("call");
+    });
+  }
+
+  $("call-btn").addEventListener("click", startCall);
+  $("call-end").addEventListener("click", endCall);
+  $("call-mute").addEventListener("click", () => {
+    voice.muted = !voice.muted;
+    const btn = $("call-mute");
+    btn.classList.toggle("muted", voice.muted);
+    if (voice.muted) {
+      if (voice.silenceTimer) { clearTimeout(voice.silenceTimer); voice.silenceTimer = null; }
+      stopListening();
+      setCallUI(null, "Muted — tap mic to resume");
+    } else if (voice.inCall && !voice.isSpeaking) {
+      startListening("call");
+    }
+  });
+
+  // Disable voice UI if unsupported
+  if (!voice.supported) {
+    const mb = $("mic-btn"); if (mb) { mb.disabled = true; mb.title = "Voice not supported in this browser"; }
+    const cb = $("call-btn"); if (cb) { cb.disabled = true; cb.title = "Voice calls need Chrome, Edge, or Safari"; }
+  }
+
   // ---------- startup: ping cloud to set initial mode ----------
   (async function probeCloud() {
     setMode("loading");

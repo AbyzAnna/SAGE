@@ -305,3 +305,173 @@ a:hover { color: var(--text); }
 }
 .btn--danger { border-color: var(--danger); color: var(--danger); }
 .btn:hover { background: var(--border); }
+
+/* ---------- mic + call buttons in chat form ---------- */
+.icon-btn {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  width: 42px; height: 42px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  align-self: stretch;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.icon-btn:hover { background: var(--border); }
+.icon-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.icon-btn--listening {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.6); }
+  50%      { box-shadow: 0 0 0 8px rgba(248,113,113,0); }
+}
+
+.call-btn {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  border: none;
+  color: #0a0c12;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  align-self: stretch;
+}
+.call-btn:hover { filter: brightness(1.1); }
+.call-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+/* ---------- full-screen call overlay ---------- */
+.call-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, #0f1320 0%, #050608 80%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+.call-overlay--show { display: flex; }
+
+.call-card {
+  width: min(480px, 100%);
+  text-align: center;
+  color: var(--text);
+}
+
+.call-orb {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #e8ecf3, #8e98ac 55%, #2a2f3a 100%);
+  display: grid;
+  place-items: center;
+  font-size: 64px;
+  font-weight: 700;
+  color: #0a0c12;
+  letter-spacing: -1px;
+  box-shadow:
+    0 0 60px rgba(207, 214, 227, 0.25),
+    inset 0 0 20px rgba(255,255,255,0.2);
+}
+.orb-letter { z-index: 2; }
+.orb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(207, 214, 227, 0.4);
+  opacity: 0;
+  pointer-events: none;
+}
+.call-orb--listening .orb-ring {
+  border-color: rgba(74, 222, 128, 0.6);
+  animation: orb-ripple 2s ease-out infinite;
+}
+.call-orb--thinking .orb-ring {
+  border-color: rgba(212, 184, 122, 0.6);
+  animation: orb-ripple 1.4s ease-out infinite;
+}
+.call-orb--speaking .orb-ring {
+  border-color: rgba(124, 158, 255, 0.6);
+  animation: orb-ripple 1.6s ease-out infinite;
+}
+.orb-ring--2 { animation-delay: 0.5s !important; }
+.orb-ring--3 { animation-delay: 1s !important; }
+@keyframes orb-ripple {
+  0%   { transform: scale(1);    opacity: 0.8; }
+  100% { transform: scale(1.6);  opacity: 0; }
+}
+
+.call-status {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  letter-spacing: 0.5px;
+  color: var(--silver);
+}
+.call-status--listening { color: #4ade80; }
+.call-status--thinking  { color: var(--gold); }
+.call-status--speaking  { color: var(--accent); }
+.call-status--error     { color: var(--danger); }
+
+.call-transcript {
+  min-height: 60px;
+  max-height: 140px;
+  overflow-y: auto;
+  font-size: 16px;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 32px;
+  padding: 0 12px;
+  line-height: 1.5;
+}
+
+.call-actions {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  margin-bottom: 18px;
+}
+.call-action {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  transition: transform 0.12s, filter 0.12s;
+}
+.call-action:hover { transform: scale(1.05); filter: brightness(1.1); }
+.call-action:active { transform: scale(0.95); }
+.call-action--mute {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.call-action--mute.muted {
+  background: var(--gold);
+  color: #0a0c12;
+}
+.call-action--end {
+  background: #ef4444;
+}
+
+.call-hint {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.7;
+}
