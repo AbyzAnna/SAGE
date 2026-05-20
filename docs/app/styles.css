@@ -439,6 +439,37 @@ a:hover { color: var(--text); }
   line-height: 1.5;
 }
 
+.call-captures {
+  min-height: 38px;
+  margin: 0 auto 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  max-width: 100%;
+}
+.capture-chip {
+  background: rgba(74, 222, 128, 0.15);
+  border: 1px solid rgba(74, 222, 128, 0.5);
+  color: #86efac;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  animation: chip-in 0.4s ease-out, chip-out 0.5s ease-in 5s forwards;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes chip-in {
+  from { transform: translateY(8px) scale(0.95); opacity: 0; }
+  to   { transform: translateY(0) scale(1);     opacity: 1; }
+}
+@keyframes chip-out {
+  to { transform: translateY(-8px); opacity: 0; }
+}
+
 .call-actions {
   display: flex;
   justify-content: center;

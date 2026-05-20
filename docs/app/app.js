@@ -192,11 +192,11 @@
       return { reply: `I couldn't find an event matching "${term}".`, created: [], updated: [], deleted: [], conflicts: [] };
     }
 
-    // Parse dates with chrono
+    // Parse dates with chrono — scans full message, picks up dates embedded in stories
     const results = window.chrono ? window.chrono.parse(message, now, { forwardDate: true }) : [];
     if (results.length === 0) {
       return {
-        reply: "I couldn't pick out a time from that. Try something like 'study math tomorrow 2-4pm' or 'dentist Thursday at 3pm'.",
+        reply: "Got it. Let me know if there's anything you want me to add.",
         created: [], updated: [], deleted: [], conflicts: []
       };
     }
@@ -208,25 +208,27 @@
       const start = r.start ? r.start.date() : null;
       let end = r.end ? r.end.date() : null;
       if (!start) continue;
+      // Skip past-tense narrative dates ("yesterday I was…"). Only schedule future things.
+      if (start.getTime() < now.getTime() - 60_000) continue;
+
+      // Detect "is due X" / "by X" patterns to identify deadlines
+      const before = message.slice(Math.max(0, r.index - 40), r.index).toLowerCase();
+      const isDeadline = /(\b(is\s+)?due\s*$|\bby\s*$|\bdeadline\s*$|\bturn\s+in.*$|\bsubmit.*$)/.test(before);
+      if (isDeadline && (!r.start.isCertain || !r.start.isCertain("hour"))) {
+        start.setHours(23, 0, 0, 0);
+      }
       if (!end) {
         end = new Date(start);
         end.setHours(end.getHours() + 1);
       }
       if (end <= start) end = new Date(start.getTime() + 3600_000);
 
-      // Build title by stripping the matched date phrase
-      let title = (message.slice(0, r.index) + " " + message.slice(r.index + r.text.length)).trim();
-      title = title.replace(/^(add|schedule|book|create|put in|block out|set up|plan)\s+/i, "")
-                   .replace(/^(an?|the|my)\s+/i, "")
-                   .replace(/^for\s+/i, "")
-                   .replace(/\s+(for|on|at|to|from)$/i, "")
-                   .replace(/\s+/g, " ")
-                   .trim();
+      // Title extraction: take the noun phrase nearest the date mention
+      let title = extractTitleAround(message, r.index, r.text.length, isDeadline);
       if (!title) title = "Event";
-      title = title[0].toUpperCase() + title.slice(1);
 
-      const category = classifyCategory(title);
-      const priority = classifyPriority(message);
+      const category = classifyCategory(title + " " + message);
+      const priority = isDeadline ? "high" : classifyPriority(message);
 
       const result = addEvent({
         title,
@@ -239,11 +241,70 @@
       result.conflicts.forEach(c => allConflicts.push(`"${title}" overlaps with "${c.title}"`));
     }
 
-    const reply = created.length === 1
-      ? `Added "${created[0].title}" — ${new Date(created[0].start).toLocaleString([], { dateStyle:"medium", timeStyle:"short" })}.`
-      : `Added ${created.length} events to your schedule.`;
+    let reply;
+    if (created.length === 1) {
+      const e = created[0];
+      reply = `Got it — added "${e.title}" for ${new Date(e.start).toLocaleString([], { dateStyle:"medium", timeStyle:"short" })}.`;
+    } else if (created.length > 1) {
+      reply = `Added ${created.length} things to your schedule: ${created.map(e => `"${e.title}"`).join(", ")}.`;
+    } else {
+      reply = "Got it.";
+    }
 
     return { reply, created, updated: [], deleted: [], conflicts: allConflicts };
+  }
+
+  // Extract a useful event title from text around a date phrase.
+  // Handles narrative forms like:
+  //   "...my chem assignment is due tomorrow night..."  →  "Chem assignment"
+  //   "...we have a meeting on Friday at 3..."          →  "Meeting"
+  //   "...party Saturday night..."                      →  "Party"
+  function extractTitleAround(message, dateIndex, dateLen, isDeadline) {
+    const before = message.slice(0, dateIndex);
+    const after  = message.slice(dateIndex + dateLen);
+
+    // Strategy 1: noun phrase right before the date (with optional "is/are due/by")
+    // e.g. "my chem assignment is due", "the dentist appointment"
+    let beforeTrimmed = before.replace(/\s+(is|are|will\s+be|gets?|happens?)\s+(due|by|on|at|in)?\s*$/i, "")
+                              .replace(/\s+(on|at|for|in)\s*$/i, "")
+                              .trim();
+    // Strip conversational filler from the END going backwards into the sentence,
+    // then take the last clause. Done BEFORE slicing words so we don't keep filler fragments.
+    beforeTrimmed = beforeTrimmed
+      .replace(/(?:^|\s)(?:oh\s+)?by\s+the\s+way\b/gi, "")
+      .replace(/(?:^|\s)(?:and\s+)?anyway\b/gi, "")
+      .replace(/(?:^|\s)you\s+know\b/gi, "")
+      .replace(/(?:^|\s)i\s+mean\b/gi, "")
+      .replace(/(?:^|\s)well\b/gi, "")
+      .trim();
+    const beforeWords = beforeTrimmed.split(/[,.;!?]/).pop().trim().split(/\s+/);
+    let candidate = beforeWords.slice(-5).join(" ");
+    // Then single-word leading filler — iterate to peel multiple layers
+    for (let i = 0; i < 4; i++) {
+      const next = candidate.replace(/^(and|but|so|then|because|since|also|oh|hey|like|um|uh|well|actually|i|me|my|the|a|an|some|that|this|those|these|have\s+(a|an|to|the)?|got\s+(a|an|the)?|need\s+to|got\s+to|gotta|wanna)\s+/i, "");
+      if (next === candidate) break;
+      candidate = next;
+    }
+    candidate = candidate.replace(/\s+(is|are|was|were|will\s+be|gets?|happens?)\s*$/i, "").trim();
+
+    // Strategy 2: if before yielded nothing useful, look right after the date phrase
+    if (!candidate || candidate.length < 3) {
+      const afterWords = after.replace(/^[,.;!?\s]+/, "").split(/[,.;!?]/)[0].trim().split(/\s+/);
+      candidate = afterWords.slice(0, 5).join(" ")
+        .replace(/^(for|with|about|to)\s+/i, "")
+        .trim();
+    }
+
+    // Strip command verbs if present at start
+    candidate = candidate.replace(/^(add|schedule|book|create|put|block|set|plan)\s+(it|that|in|out|up)?\s*/i, "").trim();
+
+    if (!candidate) return "";
+
+    // Append "(deadline)" hint if it's a deadline
+    if (isDeadline && !/deadline|due/i.test(candidate)) {
+      candidate += " (deadline)";
+    }
+    return candidate[0].toUpperCase() + candidate.slice(1);
   }
 
   function queryReply(lc, now) {
@@ -284,7 +345,17 @@
   {"op":"update","id":42,"title":"...","start":"...","end":"..."},
   {"op":"delete","id":42}
 ]}
-Default duration is 1 hour. Local times only, no timezone suffix. If user just chats or asks a question, return actions=[].`;
+
+CRITICAL: Scan the user's entire message — including casual storytelling and chat — for ANY mention of:
+  • deadlines ("X is due …", "X by …", "have to turn in X by …")
+  • appointments ("doctor on Friday", "meeting at 3")
+  • tasks with times ("study X tomorrow", "gym Tuesday morning")
+  • events ("birthday Saturday", "concert Friday night")
+Extract EVERY such mention as a create action, even if the user didn't explicitly ask you to add it. Then acknowledge them naturally in the reply (e.g. "Got it — added your chem assignment for tomorrow night.").
+
+For deadlines without a clear time, default to 23:59 (end of day) on that day with a 1-hour block ending at 23:59.
+Default duration otherwise: 1 hour. Local times only, no timezone suffix.
+If the user just chats with nothing schedule-worthy, return actions=[].`;
 
     const userPrompt = `Current local time: ${toIsoLocal(now)} (${now.toLocaleDateString([], { weekday:"long" })}).
 
@@ -642,10 +713,11 @@ User: ${message}`;
         chatInput.value = live;
       } else {
         $("call-transcript").textContent = live ? `"${live}"` : "";
-        // In call mode, debounce on silence (~1.5s after last result) to send
+        // In call mode, debounce on silence to send.
+        // 2.5s gives breathing room mid-story without feeling laggy.
         if (voice.silenceTimer) clearTimeout(voice.silenceTimer);
         if (live) {
-          voice.silenceTimer = setTimeout(() => commitCallUtterance(), 1500);
+          voice.silenceTimer = setTimeout(() => commitCallUtterance(), 2500);
         }
       }
     };
@@ -698,27 +770,99 @@ User: ${message}`;
     }
   }
 
+  function ensureVoicesLoaded() {
+    return new Promise((resolve) => {
+      if (!TTS) return resolve([]);
+      let voices = TTS.getVoices();
+      if (voices.length) return resolve(voices);
+      let settled = false;
+      const onChange = () => {
+        if (settled) return;
+        settled = true;
+        TTS.removeEventListener("voiceschanged", onChange);
+        resolve(TTS.getVoices());
+      };
+      TTS.addEventListener("voiceschanged", onChange);
+      // Fallback: some browsers never fire voiceschanged; resolve after timeout
+      setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        TTS.removeEventListener("voiceschanged", onChange);
+        resolve(TTS.getVoices());
+      }, 800);
+    });
+  }
+
   function speak(text, onDone) {
     if (!TTS || !text) { onDone && onDone(); return; }
-    TTS.cancel();  // clear any queued speech
-    const utt = new SpeechSynthesisUtterance(text);
-    if (voice.preferredVoice) utt.voice = voice.preferredVoice;
-    utt.rate = 1.05;
-    utt.pitch = 1.0;
-    utt.volume = 1.0;
-    utt.onstart = () => {
-      voice.isSpeaking = true;
-      if (voice.inCall) setCallUI("speaking", "SAGE is speaking…");
-    };
-    utt.onend = () => {
-      voice.isSpeaking = false;
-      onDone && onDone();
-    };
-    utt.onerror = () => {
-      voice.isSpeaking = false;
-      onDone && onDone();
-    };
-    TTS.speak(utt);
+
+    ensureVoicesLoaded().then(() => {
+      if (!voice.preferredVoice) voice.preferredVoice = pickVoice();
+      // Only cancel if something's actively speaking — calling cancel() and
+      // then speak() back-to-back in Chrome can silently drop the new utterance.
+      if (TTS.speaking || TTS.pending) {
+        try { TTS.cancel(); } catch {}
+      }
+
+      const utt = new SpeechSynthesisUtterance(text);
+      if (voice.preferredVoice) utt.voice = voice.preferredVoice;
+      utt.rate = 1.05;
+      utt.pitch = 1.0;
+      utt.volume = 1.0;
+
+      let started = false;
+      let finished = false;
+      let keepAlive = null;
+
+      const finish = (reason) => {
+        if (finished) return;
+        finished = true;
+        voice.isSpeaking = false;
+        if (keepAlive) { clearInterval(keepAlive); keepAlive = null; }
+        if (!started && reason === "watchdog") {
+          console.warn("[SAGE] TTS never started — check tab audio / system volume / available voices", {
+            voices: TTS.getVoices().length,
+            picked: voice.preferredVoice && voice.preferredVoice.name,
+          });
+          toast("Couldn't play voice. Check tab isn't muted and system volume is up.", "err");
+        }
+        onDone && onDone();
+      };
+
+      utt.onstart = () => {
+        started = true;
+        voice.isSpeaking = true;
+        if (voice.inCall) setCallUI("speaking", "SAGE is speaking…");
+      };
+      utt.onend = () => finish("end");
+      utt.onerror = (e) => {
+        console.warn("[SAGE] TTS error:", e.error || e);
+        finish("error");
+      };
+
+      // Chrome bug: long utterances pause after ~15s. Periodic pause+resume keeps audio flowing.
+      keepAlive = setInterval(() => {
+        if (finished) { clearInterval(keepAlive); keepAlive = null; return; }
+        if (TTS.speaking) {
+          try { TTS.pause(); TTS.resume(); } catch {}
+        }
+      }, 10000);
+
+      // Watchdog: if speech never actually starts, don't hang the call loop forever
+      setTimeout(() => { if (!started) finish("watchdog"); }, 4000);
+
+      try {
+        // Microscopic delay: in some Chrome builds, speak() immediately after a
+        // cancel() in the same tick is dropped. A 0ms setTimeout schedules it
+        // on the next event loop tick which avoids the race.
+        setTimeout(() => {
+          if (!finished) TTS.speak(utt);
+        }, 30);
+      } catch (err) {
+        console.error("[SAGE] TTS.speak threw:", err);
+        finish("throw");
+      }
+    });
   }
 
   // ---------- single-message dictation ----------
@@ -799,10 +943,45 @@ User: ${message}`;
     if (result.conflicts?.length) {
       result.conflicts.forEach(c => toast(c, "warn"));
     }
+    // Flash each captured event in the call overlay so the user sees it
+    // get added in real-time while they're still on the call.
+    (result.created || []).forEach(e => {
+      const when = new Date(e.start).toLocaleString([], { weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" });
+      flashCapture(`${e.title} — ${when}`);
+    });
 
     if (!voice.inCall) return;  // user may have hung up
     speak(result.reply || "Done.", () => {
       if (voice.inCall && !voice.muted) startListening("call");
+    });
+  }
+
+  function flashCapture(text) {
+    const box = $("call-captures");
+    if (!box) return;
+    const chip = document.createElement("div");
+    chip.className = "capture-chip";
+    chip.textContent = "✓ " + text;
+    box.appendChild(chip);
+    // Auto-clean after the CSS exit animation finishes (chip-out delays 5s)
+    setTimeout(() => chip.remove(), 5800);
+  }
+
+  // Test voice button — verifies TTS in isolation
+  const testVoiceBtn = $("test-voice-btn");
+  if (testVoiceBtn) {
+    testVoiceBtn.addEventListener("click", () => {
+      if (!TTS) {
+        toast("Your browser doesn't support speech output.", "err");
+        return;
+      }
+      testVoiceBtn.disabled = true;
+      const orig = testVoiceBtn.textContent;
+      testVoiceBtn.textContent = "🔊 Testing…";
+      speak("Hi, I'm SAGE. If you can hear me, voice output is working.", () => {
+        testVoiceBtn.disabled = false;
+        testVoiceBtn.textContent = orig;
+      });
     });
   }
 
