@@ -144,7 +144,15 @@
     };
     const conflicts = findConflicts(ev);
     state.events.push(ev);
+    if (!state._lastAddedIds) state._lastAddedIds = new Set();
+    state._lastAddedIds.add(ev.id);
     saveEvents();
+    // Auto-navigate the calendar to the week of this event so the user
+    // (and tests) immediately see what just got added.
+    const eventWeek = startOfWeek(new Date(ev.start));
+    if (eventWeek.getTime() !== state.weekStart.getTime()) {
+      state.weekStart = eventWeek;
+    }
     renderCalendar();
     return { event: ev, conflicts };
   }
@@ -444,8 +452,17 @@ User: ${message}`;
   }
 
   // ---------- chat orchestration ----------
+  // ?engine=basic forces the deterministic parser (used by E2E tests for
+  // reproducibility; also useful if the cloud LLM is rate-limited).
+  const FORCE_BASIC = new URLSearchParams(location.search).get("engine") === "basic";
+
   async function handleMessage(text) {
     const now = new Date();
+
+    if (FORCE_BASIC) {
+      setMode("basic");
+      return basicEngine(text, now);
+    }
 
     // Always try cloud first if we're not in confirmed-error mode
     if (state.mode !== "error") {
@@ -542,6 +559,7 @@ User: ${message}`;
     const today = new Date();
     const overloaded = computeOverloadedDays();
 
+    let weekHours = 0, weekCount = 0, deadlineCount = 0;
     for (let i = 0; i < 7; i++) {
       const date = addDays(state.weekStart, i);
       const dayEvents = state.events
@@ -550,6 +568,7 @@ User: ${message}`;
 
       const dayEl = document.createElement("div");
       dayEl.className = "day";
+      dayEl.dataset.testid = `day-${date.toISOString().slice(0,10)}`;
       if (sameDay(date, today)) dayEl.classList.add("day--today");
       const dayKey = date.toISOString().slice(0,10);
       if (overloaded.has(dayKey)) dayEl.classList.add("day--overloaded");
@@ -562,8 +581,13 @@ User: ${message}`;
       `;
 
       dayEvents.forEach(ev => {
+        weekCount += 1;
+        weekHours += (new Date(ev.end) - new Date(ev.start)) / 3600_000;
+        if (ev.priority === "high") deadlineCount += 1;
         const evEl = document.createElement("div");
-        evEl.className = `event event--${ev.category} event--${ev.priority}`;
+        const isNew = state._lastAddedIds && state._lastAddedIds.has(ev.id);
+        evEl.className = `event event--${ev.category} event--${ev.priority}${isNew ? " event--new" : ""}`;
+        evEl.dataset.testid = `event-${ev.id}`;
         const s = new Date(ev.start), x = new Date(ev.end);
         evEl.innerHTML = `
           <div class="event-title">${escapeHtml(ev.title)}</div>
@@ -573,7 +597,32 @@ User: ${message}`;
         dayEl.appendChild(evEl);
       });
 
+      if (dayEvents.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty-day";
+        empty.textContent = "—";
+        dayEl.appendChild(empty);
+      }
+
       calendarEl.appendChild(dayEl);
+    }
+
+    // Clear new-flag after one render
+    state._lastAddedIds = null;
+
+    // Week stats
+    const stats = $("week-stats");
+    if (stats) {
+      const overloadCount = overloaded.size;
+      const overloadStat = overloadCount
+        ? `<span class="stat stat--warn">⚠ <strong>${overloadCount}</strong> overloaded day${overloadCount > 1 ? "s" : ""}</span>`
+        : "";
+      stats.innerHTML = `
+        <span class="stat" data-testid="stat-count">📅 <strong>${weekCount}</strong> event${weekCount === 1 ? "" : "s"}</span>
+        <span class="stat" data-testid="stat-hours">⏱ <strong>${weekHours.toFixed(1)}</strong> h scheduled</span>
+        <span class="stat" data-testid="stat-deadlines">🔥 <strong>${deadlineCount}</strong> high-priority</span>
+        ${overloadStat}
+      `;
     }
   }
 
@@ -581,6 +630,7 @@ User: ${message}`;
     const existing = document.querySelector(".modal-backdrop");
     if (existing) existing.remove();
     const s = new Date(ev.start), x = new Date(ev.end);
+    const gcalUrl = buildGoogleCalendarUrl(ev);
     const backdrop = document.createElement("div");
     backdrop.className = "modal-backdrop modal-backdrop--show";
     backdrop.innerHTML = `
@@ -589,6 +639,10 @@ User: ${message}`;
         <div class="meta">
           ${s.toLocaleString()} → ${x.toLocaleString()}<br>
           ${ev.category} · ${ev.priority} priority
+        </div>
+        <div class="modal-quick">
+          <a href="${gcalUrl}" target="_blank" rel="noopener" title="Opens Google Calendar pre-filled in a new tab">➕ Add to Google Calendar</a>
+          <button data-act="download-ics" title="Downloads a .ics — double-click to add to Apple Calendar / Outlook">⬇️ .ics for Apple/Outlook</button>
         </div>
         <div class="desc">${escapeHtml(ev.description || "(no description)")}</div>
         <div class="modal-actions">
@@ -604,8 +658,105 @@ User: ${message}`;
       toast(`Removed "${ev.title}"`, "ok");
       backdrop.remove();
     });
+    backdrop.querySelector('[data-act="download-ics"]').addEventListener("click", () => {
+      downloadIcs([ev], `sage-${slugify(ev.title)}.ics`);
+      toast(`Downloaded — double-click to add to Apple Calendar`, "ok");
+    });
     document.body.appendChild(backdrop);
   }
+
+  // ---------- calendar export (ICS / Google) ----------
+  // Build ISO basic format for ICS: YYYYMMDDTHHMMSS
+  function icsDateTime(d) {
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  }
+  function icsEscape(s) {
+    return String(s || "")
+      .replace(/\\/g, "\\\\")
+      .replace(/;/g, "\\;")
+      .replace(/,/g, "\\,")
+      .replace(/\r?\n/g, "\\n");
+  }
+  function buildIcs(events) {
+    const dtstamp = icsDateTime(new Date());
+    const lines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//SAGE//sage-scheduler//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "X-WR-CALNAME:SAGE Schedule",
+    ];
+    for (const ev of events) {
+      const s = new Date(ev.start);
+      const x = new Date(ev.end);
+      lines.push("BEGIN:VEVENT");
+      lines.push(`UID:sage-${ev.id}-${dtstamp}@sage.local`);
+      lines.push(`DTSTAMP:${dtstamp}`);
+      lines.push(`DTSTART:${icsDateTime(s)}`);
+      lines.push(`DTEND:${icsDateTime(x)}`);
+      lines.push(`SUMMARY:${icsEscape(ev.title)}`);
+      if (ev.description) lines.push(`DESCRIPTION:${icsEscape(ev.description)}`);
+      lines.push(`CATEGORIES:${icsEscape(ev.category)}`);
+      lines.push(`PRIORITY:${ev.priority === "high" ? 1 : ev.priority === "low" ? 9 : 5}`);
+      lines.push("END:VEVENT");
+    }
+    lines.push("END:VCALENDAR");
+    return lines.join("\r\n");
+  }
+  function downloadIcs(events, filename) {
+    const ics = buildIcs(events);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "sage-schedule.ics";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+  }
+  function buildGoogleCalendarUrl(ev) {
+    // https://calendar.google.com/calendar/r/eventedit?text=TITLE&dates=YYYYMMDDTHHMMSS/YYYYMMDDTHHMMSS&details=DESC
+    const s = new Date(ev.start), x = new Date(ev.end);
+    const params = new URLSearchParams({
+      action: "TEMPLATE",
+      text: ev.title,
+      dates: `${icsDateTime(s)}/${icsDateTime(x)}`,
+      details: ev.description || `Added by SAGE — category: ${ev.category}, priority: ${ev.priority}`,
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  }
+  function slugify(s) {
+    return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "event";
+  }
+
+  // ---------- sync dropdown wiring ----------
+  const syncBtn = $("sync-btn");
+  const syncDropdown = syncBtn.parentElement;
+  syncBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    syncDropdown.classList.toggle("dropdown--open");
+  });
+  document.addEventListener("click", () => syncDropdown.classList.remove("dropdown--open"));
+  $("sync-menu").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    e.stopPropagation();
+    const act = btn.dataset.act;
+    if (act === "export-ics") {
+      if (!state.events.length) { toast("No events yet — add some first.", "warn"); return; }
+      downloadIcs(state.events, "sage-schedule.ics");
+      toast(`Downloaded sage-schedule.ics (${state.events.length} events) — import it into any calendar app`, "ok");
+    } else if (act === "open-google") {
+      window.open("https://calendar.google.com/", "_blank", "noopener");
+    } else if (act === "open-apple") {
+      window.open("webcal://", "_self");
+      // Most macOS browsers will open Apple Calendar; on other OSes, do nothing harmful.
+      toast("If nothing happened, Apple Calendar may not be installed on this device.", "warn");
+    }
+    syncDropdown.classList.remove("dropdown--open");
+  });
 
   $("prev-week").addEventListener("click", () => { state.weekStart = addDays(state.weekStart, -7); renderCalendar(); });
   $("next-week").addEventListener("click", () => { state.weekStart = addDays(state.weekStart,  7); renderCalendar(); });
@@ -1006,8 +1157,30 @@ User: ${message}`;
     const cb = $("call-btn"); if (cb) { cb.disabled = true; cb.title = "Voice calls need Chrome, Edge, or Safari"; }
   }
 
+  // ---------- startup: pick best initial week to show ----------
+  // If we have events but none in the current week, jump to the week of the
+  // next upcoming event (or the most recent one if all are in the past).
+  (function pickInitialWeek() {
+    if (!state.events.length) return;
+    const nowMs = Date.now();
+    const inCurrentWeek = state.events.some(e => {
+      const ws = state.weekStart.getTime();
+      const we = ws + 7 * 86400_000;
+      const s = new Date(e.start).getTime();
+      return s >= ws && s < we;
+    });
+    if (inCurrentWeek) return;
+    const upcoming = state.events
+      .filter(e => new Date(e.start).getTime() >= nowMs)
+      .sort((a, b) => new Date(a.start) - new Date(b.start));
+    const pick = upcoming[0] || state.events.slice().sort((a, b) => new Date(b.start) - new Date(a.start))[0];
+    state.weekStart = startOfWeek(new Date(pick.start));
+    renderCalendar();
+  })();
+
   // ---------- startup: ping cloud to set initial mode ----------
   (async function probeCloud() {
+    if (FORCE_BASIC) { setMode("basic"); return; }
     setMode("loading");
     try {
       const res = await fetch("https://text.pollinations.ai/ping?model=openai-fast", {

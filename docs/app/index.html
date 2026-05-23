@@ -22,6 +22,15 @@
         <span class="dot" id="mode-dot"></span>
         <span id="mode-text">Loading…</span>
       </span>
+      <div class="dropdown">
+        <button id="sync-btn" class="ghost-btn" title="Send your schedule to Google Calendar, Apple Calendar, or any other calendar app">📅 Sync</button>
+        <div class="dropdown-menu" id="sync-menu" role="menu">
+          <button data-act="export-ics" role="menuitem">⬇️ Download all events (.ics)</button>
+          <button data-act="open-google" role="menuitem">🌐 Open Google Calendar</button>
+          <button data-act="open-apple" role="menuitem">🍎 Open Apple Calendar</button>
+          <div class="dropdown-hint">Tip: import the .ics into any calendar app. Per-event "Add to Google" links live on each event.</div>
+        </div>
+      </div>
       <button id="test-voice-btn" class="ghost-btn" title="Make SAGE say a quick line out loud to test your speakers">🔊 Test voice</button>
       <button id="reset-btn" class="ghost-btn" title="Clear all events from this browser">Clear</button>
       <a class="ghost-btn" href="https://github.com/AbyzAnna/SAGE" target="_blank" rel="noopener">GitHub</a>
@@ -30,7 +39,7 @@
 
   <main class="layout">
     <section class="chat-pane">
-      <div id="messages" class="messages">
+      <div id="messages" class="messages" data-testid="messages">
         <div class="message message--bot">
           <div class="bubble">
             <strong>Hey! I'm SAGE.</strong> Tell me what you need to do — a task, a meeting, an exam, anything. I'll figure out the dates, times, and categories.<br /><br />
@@ -46,6 +55,7 @@
         </button>
         <textarea
           id="chat-input"
+          data-testid="chat-input"
           placeholder="Tell SAGE what you need to do…"
           rows="2"
           autofocus
@@ -56,7 +66,7 @@
           </svg>
           Call
         </button>
-        <button type="submit" id="send-btn">Send</button>
+        <button type="submit" id="send-btn" data-testid="send-btn">Send</button>
       </form>
     </section>
 
@@ -67,6 +77,7 @@
         <button id="next-week" class="nav-btn" aria-label="Next week">›</button>
         <button id="today-btn" class="today-btn">Today</button>
       </div>
+      <div class="week-stats" id="week-stats" aria-live="polite"></div>
       <div id="calendar" class="calendar"></div>
       <div class="legend">
         <span><i style="background:var(--cat-study)"></i> study</span>

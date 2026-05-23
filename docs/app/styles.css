@@ -306,6 +306,110 @@ a:hover { color: var(--text); }
 .btn--danger { border-color: var(--danger); color: var(--danger); }
 .btn:hover { background: var(--border); }
 
+/* ---------- dropdown menu ---------- */
+.dropdown { position: relative; display: inline-block; }
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 240px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.5);
+  padding: 6px;
+  display: none;
+  z-index: 60;
+}
+.dropdown--open .dropdown-menu { display: block; }
+.dropdown-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.dropdown-menu button:hover { background: var(--border); }
+.dropdown-hint {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* ---------- week stats strip ---------- */
+.week-stats {
+  display: flex;
+  gap: 16px;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel);
+  flex-wrap: wrap;
+}
+.week-stats .stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.week-stats .stat strong {
+  color: var(--silver);
+  font-weight: 600;
+}
+.week-stats .stat--warn strong { color: var(--warn); }
+
+/* ---------- empty state ---------- */
+.empty-day {
+  color: rgba(138, 146, 163, 0.4);
+  font-size: 11px;
+  font-style: italic;
+  margin-top: 6px;
+}
+
+/* ---------- modal extra ---------- */
+.modal-quick {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.modal-quick a, .modal-quick button {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.modal-quick a:hover, .modal-quick button:hover { background: var(--border); color: var(--text); }
+
+/* ---------- event slot subtle hover lift ---------- */
+.event {
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s;
+}
+.event:hover {
+  transform: translateX(2px);
+  box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+}
+@keyframes event-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+.event--new { animation: event-in 0.35s ease-out; }
+
 /* ---------- mic + call buttons in chat form ---------- */
 .icon-btn {
   background: var(--panel-2);
