@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SAGE — Try it now</title>
-  <meta name="description" content="Talk to your schedule. A free, in-browser AI scheduling assistant." />
+  <title>SAGE — Talk to your schedule</title>
+  <meta name="description" content="Talk to your schedule. A free, in-browser AI scheduling assistant with voice, calendar sync, and smart insights." />
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -23,15 +23,17 @@
         <span id="mode-text">Loading…</span>
       </span>
       <div class="dropdown">
-        <button id="sync-btn" class="ghost-btn" title="Send your schedule to Google Calendar, Apple Calendar, or any other calendar app">📅 Sync</button>
+        <button id="sync-btn" class="ghost-btn" title="Send your schedule to Google Calendar, Apple Calendar, or any calendar app">📅 Sync</button>
         <div class="dropdown-menu" id="sync-menu" role="menu">
           <button data-act="export-ics" role="menuitem">⬇️ Download all events (.ics)</button>
           <button data-act="open-google" role="menuitem">🌐 Open Google Calendar</button>
           <button data-act="open-apple" role="menuitem">🍎 Open Apple Calendar</button>
-          <div class="dropdown-hint">Tip: import the .ics into any calendar app. Per-event "Add to Google" links live on each event.</div>
+          <div class="dropdown-hint">Import the .ics into any calendar app. Per-event "Add to Google" links are on each event modal.</div>
         </div>
       </div>
-      <button id="test-voice-btn" class="ghost-btn" title="Make SAGE say a quick line out loud to test your speakers">🔊 Test voice</button>
+      <button id="notify-btn" class="ghost-btn" data-testid="notify-btn" title="Get a browser notification 5 minutes before each event">🔔 Reminders</button>
+      <button id="test-voice-btn" class="ghost-btn" title="Make SAGE say a quick line so you can verify your speakers">🔊 Test voice</button>
+      <button id="help-btn" class="ghost-btn" title="Keyboard shortcuts">?</button>
       <button id="reset-btn" class="ghost-btn" title="Clear all events from this browser">Clear</button>
       <a class="ghost-btn" href="https://github.com/AbyzAnna/SAGE" target="_blank" rel="noopener">GitHub</a>
     </div>
@@ -42,8 +44,14 @@
       <div id="messages" class="messages" data-testid="messages">
         <div class="message message--bot">
           <div class="bubble">
-            <strong>Hey! I'm SAGE.</strong> Tell me what you need to do — a task, a meeting, an exam, anything. I'll figure out the dates, times, and categories.<br /><br />
-            Try: <em>"Study calculus tomorrow 2-4pm"</em> · <em>"Dentist Thursday at 3"</em> · <em>"What's on my schedule this week?"</em>
+            <strong>Hey, I'm SAGE.</strong> Tell me what's on your mind — anything you need to schedule.
+            <div class="suggestion-chips" data-testid="starter-chips">
+              <button class="chip" data-prompt="Study calculus tomorrow 2pm to 4pm">📚 Study calc tomorrow 2-4pm</button>
+              <button class="chip" data-prompt="Dentist appointment next Thursday at 3pm">🩺 Dentist Thursday 3pm</button>
+              <button class="chip" data-prompt="Gym every weekday at 7am">🏋️ Gym every weekday 7am</button>
+              <button class="chip" data-prompt="Find me 2 hours free this week">🔍 Find me 2h free this week</button>
+              <button class="chip" data-prompt="What's on my schedule this week?">📅 What's on this week?</button>
+            </div>
           </div>
         </div>
       </div>
@@ -56,7 +64,7 @@
         <textarea
           id="chat-input"
           data-testid="chat-input"
-          placeholder="Tell SAGE what you need to do…"
+          placeholder="Tell SAGE what you need to do… (Enter to send, Shift+Enter for new line)"
           rows="2"
           autofocus
         ></textarea>
@@ -72,13 +80,24 @@
 
     <section class="calendar-pane">
       <div class="calendar-header">
-        <button id="prev-week" class="nav-btn" aria-label="Previous week">‹</button>
+        <button id="prev-week" class="nav-btn" aria-label="Previous">‹</button>
         <h2 id="week-title">This week</h2>
-        <button id="next-week" class="nav-btn" aria-label="Next week">›</button>
+        <button id="next-week" class="nav-btn" aria-label="Next">›</button>
         <button id="today-btn" class="today-btn">Today</button>
+        <div class="view-toggle" role="tablist" aria-label="View mode">
+          <button id="view-week" class="seg-btn seg-btn--active" data-view="week" role="tab" aria-selected="true">Week</button>
+          <button id="view-day"  class="seg-btn"                 data-view="day"  role="tab" aria-selected="false">Day</button>
+        </div>
+        <div class="search-wrap">
+          <input id="search-input" data-testid="search-input" type="search" placeholder="🔍 Search events…" />
+        </div>
       </div>
+
+      <div class="today-panel" id="today-panel" data-testid="today-panel" aria-live="polite"></div>
       <div class="week-stats" id="week-stats" aria-live="polite"></div>
-      <div id="calendar" class="calendar"></div>
+
+      <div id="calendar" class="calendar" data-view-mode="week"></div>
+
       <div class="legend">
         <span><i style="background:var(--cat-study)"></i> study</span>
         <span><i style="background:var(--cat-work)"></i> work</span>
@@ -90,7 +109,26 @@
     </section>
   </main>
 
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" data-testid="toast"></div>
+
+  <!-- Help / shortcuts modal -->
+  <div id="help-modal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal modal--help">
+      <h3>Keyboard shortcuts</h3>
+      <table class="kbd-table">
+        <tr><td><kbd>/</kbd></td><td>Focus chat</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Focus search</td></tr>
+        <tr><td><kbd>Enter</kbd></td><td>Send message</td></tr>
+        <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>New line in chat</td></tr>
+        <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous / Next period</td></tr>
+        <tr><td><kbd>T</kbd></td><td>Jump to today</td></tr>
+        <tr><td><kbd>W</kbd> / <kbd>D</kbd></td><td>Week / Day view</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Close any modal</td></tr>
+        <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+      </table>
+      <div class="modal-actions"><button class="btn" data-act="close">Close</button></div>
+    </div>
+  </div>
 
   <!-- Full-screen voice call overlay -->
   <div id="call-overlay" class="call-overlay" aria-hidden="true">
@@ -120,7 +158,6 @@
     </div>
   </div>
 
-  <!-- chrono-node for robust natural language date parsing (fallback engine) -->
   <script type="module">
     import * as chrono from "https://cdn.jsdelivr.net/npm/chrono-node@2.9.1/+esm";
     window.chrono = chrono;

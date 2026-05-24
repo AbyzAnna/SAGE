@@ -337,6 +337,18 @@ p > code, li > code { background: #06080d; padding: 2px 6px; border-radius: 4px;
 }
 .tech strong { color: var(--silver); display: block; margin-bottom: 4px; font-size: 16px; }
 
+kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font-family: "SF Mono", Monaco, monospace;
+  font-size: 11px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  color: var(--silver);
+}
+
 /* ---------- footer ---------- */
 .footer {
   text-align: center;

@@ -37,7 +37,7 @@ test.describe("SAGE end-to-end", () => {
 
   test("01 — page loads with chat starter and zero events", async ({ page }) => {
     await expect(page.locator('h1').first()).toHaveText("SAGE");
-    await expect(page.locator('.message--bot .bubble').first()).toContainText("Hey! I'm SAGE");
+    await expect(page.locator('.message--bot .bubble').first()).toContainText(/Hey,? I'm SAGE/i);
     await expect(page.locator('[data-testid="stat-count"]')).toContainText("0 events");
     await expect(page.locator('[data-testid="stat-hours"]')).toContainText("0.0 h");
     await expect(page.locator('[data-testid="stat-deadlines"]')).toContainText("0 high-priority");
@@ -129,5 +129,110 @@ test.describe("SAGE end-to-end", () => {
     // Reload and confirm storage was wiped
     await page.reload();
     await expect(page.locator('.event')).toHaveCount(0);
+  });
+
+  // ---------- new features ----------
+
+  test("11 — quick-add via day '+' button opens form and creates event", async ({ page }) => {
+    // NOW=Sat May 23 → current week is May 17–23. Use Saturday (today) for simplicity.
+    await page.click('[data-testid="add-2026-05-23"]');
+    await expect(page.locator('[data-testid="add-modal"]')).toBeVisible();
+    await page.fill('[data-testid="qa-title"]', "Morning workout");
+    await page.selectOption('[data-testid="qa-category"]', "health");
+    await page.click('[data-testid="add-confirm"]');
+    await expect(page.locator('[data-testid="add-modal"]')).toHaveCount(0);
+    const cell = page.locator('[data-testid="day-2026-05-23"]');
+    await expect(cell.locator('.event')).toHaveCount(1);
+    await expect(cell.locator('.event').first()).toContainText(/morning workout/i);
+    await expect(cell.locator('.event').first()).toHaveClass(/event--health/);
+  });
+
+  test("12 — edit event: rename + recategorize persists", async ({ page }) => {
+    await send(page, "team standup Monday 10am to 11am");
+    await page.click('.event >> nth=0');
+    await expect(page.locator('[data-testid="event-modal"]')).toBeVisible();
+    await page.click('[data-testid="edit-btn"]');
+    await page.fill('[data-testid="ef-title"]', "Eng all-hands");
+    await page.selectOption('[data-testid="ef-category"]', "work");
+    await page.click('[data-testid="save-edit-btn"]');
+    await expect(page.locator('[data-testid="event-modal"]')).toHaveCount(0);
+    const ev = page.locator('.event').first();
+    await expect(ev).toContainText(/eng all-hands/i);
+    await expect(ev).toHaveClass(/event--work/);
+    await page.reload();
+    await expect(page.locator('.event').first()).toContainText(/eng all-hands/i);
+  });
+
+  test("13 — search filter highlights matches and dims the rest", async ({ page }) => {
+    await send(page, "study calc Monday 2pm to 4pm");
+    await send(page, "gym Tuesday 6am");
+    await send(page, "lunch Wednesday at noon");
+    await page.fill('[data-testid="search-input"]', "calc");
+    // Matching event gets event--matched, non-matching get dimmed
+    await expect(page.locator('.event--matched')).toHaveCount(1);
+    await expect(page.locator('.event--matched').first()).toContainText(/calc/i);
+    await expect(page.locator('.event--dimmed')).toHaveCount(2);
+  });
+
+  test("14 — Day view toggle renders an hour grid", async ({ page }) => {
+    await send(page, "yoga Monday 8am to 9am");
+    // Switch to day view via the segmented button
+    await page.click("#view-day");
+    await expect(page.locator(".calendar")).toHaveAttribute("data-view-mode", "day");
+    // The day-view container should appear
+    await expect(page.locator(".day-view")).toBeVisible();
+    // And the event should appear in the hour grid for Monday
+    // Navigate to Monday May 25 (next Monday from May 23)
+    await page.click("#next-week"); // in day view, this is "next day" — May 24
+    await page.click("#next-week"); // May 25
+    await expect(page.locator(".day-view-event")).toHaveCount(1);
+    await expect(page.locator(".day-view-event").first()).toContainText(/yoga/i);
+  });
+
+  test("15 — Today panel shows the next event with a countdown", async ({ page }) => {
+    // Add an event later today (2pm) — NOW is 10am
+    await send(page, "team sync today at 2pm");
+    await expect(page.locator('[data-testid="today-panel"]')).toBeVisible();
+    await expect(page.locator('[data-testid="today-next"]')).toContainText(/team sync/i);
+    const cd = await page.locator('[data-testid="today-countdown"]').textContent();
+    // Countdown should mention "in" + hours/minutes
+    expect(cd).toMatch(/in\s+\d+h/i);
+  });
+
+  test("16 — Find-free-time command returns slot suggestions", async ({ page }) => {
+    await send(page, "find me 2 hours free this week");
+    const lastBot = page.locator('.message--bot .bubble').last();
+    await expect(lastBot).toContainText(/found\s+\d+\s+free\s+slot/i);
+  });
+
+  test("17 — Undo restores a deleted event", async ({ page }) => {
+    await send(page, "history paper Tuesday 3pm to 4pm");
+    await expect(page.locator('.event')).toHaveCount(1);
+    await page.click('.event >> nth=0');
+    await page.click('[data-testid="delete-btn"]');
+    await expect(page.locator('.event')).toHaveCount(0);
+    // Undo toast should appear with an Undo button
+    const toastEl = page.locator('[data-testid="toast"]');
+    await expect(toastEl).toBeVisible();
+    await expect(toastEl).toContainText(/removed/i);
+    await toastEl.locator(".toast-action").click();
+    await expect(page.locator('.event')).toHaveCount(1);
+    await expect(page.locator('.event').first()).toContainText(/history paper/i);
+  });
+
+  test("18 — Help modal opens with the '?' key shortcut", async ({ page }) => {
+    await page.locator("body").click();  // ensure no input is focused
+    await page.keyboard.press("?");
+    await expect(page.locator("#help-modal")).toHaveAttribute("aria-hidden", "false");
+    await expect(page.locator("#help-modal")).toContainText(/keyboard shortcuts/i);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#help-modal")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  test("19 — Clicking a starter chip prefills the chat input", async ({ page }) => {
+    const chip = page.locator('[data-testid="starter-chips"] .chip').first();
+    const prompt = await chip.getAttribute("data-prompt");
+    await chip.click();
+    await expect(page.locator('[data-testid="chat-input"]')).toHaveValue(prompt);
   });
 });
