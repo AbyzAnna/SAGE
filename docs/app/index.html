@@ -1,20 +1,26 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SAGE — Talk to your schedule</title>
-  <meta name="description" content="Talk to your schedule. A free, in-browser AI scheduling assistant with voice, calendar sync, and smart insights." />
+  <title>sage. — talk to your schedule</title>
+  <meta name="description" content="A calendar that listens, not one you click. Local, private, free." />
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="../">
-      <span class="logo-mark" aria-hidden="true">S</span>
+      <svg class="logo-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <path d="M20 4 C28 10 32 18 32 26 C32 32 26 36 20 36 C14 36 8 32 8 26 C8 18 12 10 20 4 Z" fill="currentColor"/>
+        <path d="M20 6 L20 34" stroke="#EFEDE6" stroke-width="1.2"/>
+      </svg>
       <div>
-        <h1>SAGE</h1>
-        <p class="tagline">Talk to your schedule.</p>
+        <h1>sage<span class="dot">.</span></h1>
+        <p class="tagline">talk to your schedule.</p>
       </div>
     </a>
     <div class="status-row">
@@ -23,16 +29,16 @@
         <span id="mode-text">Loading…</span>
       </span>
       <div class="dropdown">
-        <button id="sync-btn" class="ghost-btn" title="Send your schedule to Google Calendar, Apple Calendar, or any calendar app">📅 Sync</button>
+        <button id="sync-btn" class="ghost-btn" title="Send your schedule to Google Calendar, Apple Calendar, or any calendar app">Sync</button>
         <div class="dropdown-menu" id="sync-menu" role="menu">
-          <button data-act="export-ics" role="menuitem">⬇️ Download all events (.ics)</button>
-          <button data-act="open-google" role="menuitem">🌐 Open Google Calendar</button>
-          <button data-act="open-apple" role="menuitem">🍎 Open Apple Calendar</button>
-          <div class="dropdown-hint">Import the .ics into any calendar app. Per-event "Add to Google" links are on each event modal.</div>
+          <button data-act="export-ics" role="menuitem">Download all events (.ics)</button>
+          <button data-act="open-google" role="menuitem">Open Google Calendar</button>
+          <button data-act="open-apple" role="menuitem">Open Apple Calendar</button>
+          <div class="dropdown-hint">Import the .ics into any calendar. Per-event Google links live on each event.</div>
         </div>
       </div>
-      <button id="notify-btn" class="ghost-btn" data-testid="notify-btn" title="Get a browser notification 5 minutes before each event">🔔 Reminders</button>
-      <button id="test-voice-btn" class="ghost-btn" title="Make SAGE say a quick line so you can verify your speakers">🔊 Test voice</button>
+      <button id="notify-btn" class="ghost-btn" data-testid="notify-btn" title="Browser notification 5 minutes before each event">Reminders</button>
+      <button id="test-voice-btn" class="ghost-btn" title="Test your speakers">Test voice</button>
       <button id="help-btn" class="ghost-btn" title="Keyboard shortcuts">?</button>
       <button id="reset-btn" class="ghost-btn" title="Clear all events from this browser">Clear</button>
       <a class="ghost-btn" href="https://github.com/AbyzAnna/SAGE" target="_blank" rel="noopener">GitHub</a>
@@ -44,19 +50,20 @@
       <div id="messages" class="messages" data-testid="messages">
         <div class="message message--bot">
           <div class="bubble">
-            <strong>Hey, I'm SAGE.</strong> Tell me what's on your mind — anything you need to schedule.
+            <span class="bubble-eyebrow">sage</span>
+            Tell me what's on your mind. I'll listen, then quietly produce a real schedule.
             <div class="suggestion-chips" data-testid="starter-chips">
-              <button class="chip" data-prompt="Study calculus tomorrow 2pm to 4pm">📚 Study calc tomorrow 2-4pm</button>
-              <button class="chip" data-prompt="Dentist appointment next Thursday at 3pm">🩺 Dentist Thursday 3pm</button>
-              <button class="chip" data-prompt="Gym every weekday at 7am">🏋️ Gym every weekday 7am</button>
-              <button class="chip" data-prompt="Find me 2 hours free this week">🔍 Find me 2h free this week</button>
-              <button class="chip" data-prompt="What's on my schedule this week?">📅 What's on this week?</button>
+              <button class="chip" data-prompt="Study calculus tomorrow 2pm to 4pm">study calc tomorrow 2–4</button>
+              <button class="chip" data-prompt="Dentist appointment next Thursday at 3pm">dentist thursday 3pm</button>
+              <button class="chip" data-prompt="Gym every weekday at 7am">gym every weekday 7am</button>
+              <button class="chip" data-prompt="Find me 2 hours free this week">find 2h free this week</button>
+              <button class="chip" data-prompt="What's on my schedule this week?">what's on this week?</button>
             </div>
           </div>
         </div>
       </div>
       <form id="chat-form" class="chat-form">
-        <button type="button" id="mic-btn" class="icon-btn" title="Dictate a message (click and speak)" aria-label="Dictate">
+        <button type="button" id="mic-btn" class="icon-btn" title="Dictate (click and speak)" aria-label="Dictate">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
             <path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/>
           </svg>
@@ -64,12 +71,12 @@
         <textarea
           id="chat-input"
           data-testid="chat-input"
-          placeholder="Tell SAGE what you need to do… (Enter to send, Shift+Enter for new line)"
+          placeholder="describe your week…"
           rows="2"
           autofocus
         ></textarea>
-        <button type="button" id="call-btn" class="call-btn" title="Start a hands-free voice call with SAGE" aria-label="Start call">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <button type="button" id="call-btn" class="call-btn" title="Hands-free voice call with sage" aria-label="Call">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
             <path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .57 3.6 1 1 0 0 1-.25 1Z"/>
           </svg>
           Call
@@ -89,7 +96,7 @@
           <button id="view-day"  class="seg-btn"                 data-view="day"  role="tab" aria-selected="false">Day</button>
         </div>
         <div class="search-wrap">
-          <input id="search-input" data-testid="search-input" type="search" placeholder="🔍 Search events…" />
+          <input id="search-input" data-testid="search-input" type="search" placeholder="search events…" />
         </div>
       </div>
 
@@ -114,7 +121,8 @@
   <!-- Help / shortcuts modal -->
   <div id="help-modal" class="modal-backdrop" aria-hidden="true">
     <div class="modal modal--help">
-      <h3>Keyboard shortcuts</h3>
+      <div class="eyebrow">Keyboard</div>
+      <h3>Shortcuts</h3>
       <table class="kbd-table">
         <tr><td><kbd>/</kbd></td><td>Focus chat</td></tr>
         <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Focus search</td></tr>
@@ -134,7 +142,12 @@
   <div id="call-overlay" class="call-overlay" aria-hidden="true">
     <div class="call-card">
       <div class="call-orb" id="call-orb">
-        <span class="orb-letter">S</span>
+        <svg viewBox="0 0 120 140" fill="none" aria-hidden="true" class="orb-leaf">
+          <path d="M60 8 C90 32 102 64 102 88 C102 110 84 128 60 128 C36 128 18 110 18 88 C18 64 30 32 60 8 Z" fill="currentColor"/>
+          <path d="M60 14 L60 124" stroke="#EFEDE6" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M60 48 Q42 56 30 80" stroke="#EFEDE6" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".7"/>
+          <path d="M60 48 Q78 56 90 80" stroke="#EFEDE6" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".7"/>
+        </svg>
         <span class="orb-ring orb-ring--1"></span>
         <span class="orb-ring orb-ring--2"></span>
         <span class="orb-ring orb-ring--3"></span>

@@ -1,188 +1,515 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SAGE — Talk to your schedule</title>
-  <meta name="description" content="SAGE is an AI scheduling assistant that converts natural conversation into a real schedule. Local, private, and free." />
-  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sage. — A calendar that listens.</title>
+<meta name="description" content="A local, private scheduling assistant. Write a sentence; a real, structured week assembles itself." />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <nav class="nav">
-    <a href="#" class="nav-brand">
-      <span class="nav-logo" id="nav-logo"></span>
-      <span>SAGE</span>
-    </a>
-    <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#how">How it works</a>
-      <a href="#stack">Stack</a>
-      <a href="https://github.com/AbyzAnna/SAGE" target="_blank" rel="noopener">GitHub</a>
-    </div>
-  </nav>
 
-  <header class="hero">
-    <div class="stars" aria-hidden="true"></div>
-    <div class="logo-wrap">
-      <img
-        id="logo-img"
-        src="assets/logo.png"
-        alt="SAGE logo"
-        onerror="this.style.display='none'; document.getElementById('logo-svg').style.display='block';"
-      />
-      <svg id="logo-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="display:none">
-        <defs>
-          <linearGradient id="silver" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#e8ecf3"/>
-            <stop offset="50%" stop-color="#a5b0c2"/>
-            <stop offset="100%" stop-color="#5d6878"/>
-          </linearGradient>
-          <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#f5e6c8"/>
-            <stop offset="100%" stop-color="#c9a96b"/>
-          </linearGradient>
-        </defs>
-        <circle cx="100" cy="100" r="88" fill="none" stroke="url(#silver)" stroke-width="4"/>
-        <path d="M 70 50 Q 130 50 130 100 Q 130 150 70 150 Q 110 130 110 100 Q 110 70 70 50 Z"
-              fill="url(#silver)" opacity="0.9"/>
-        <circle cx="140" cy="65" r="2.5" fill="url(#gold)"/>
-        <circle cx="155" cy="80" r="2" fill="url(#gold)"/>
-        <circle cx="148" cy="95" r="1.5" fill="url(#gold)"/>
-      </svg>
+<!-- ============ TOP BAR ============ -->
+<div class="topbar">
+  <div class="frame">
+    <div class="topbar-inner">
+      <div class="tb-left">
+        <svg class="tb-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <path d="M20 4 C28 10 32 18 32 26 C32 32 26 36 20 36 C14 36 8 32 8 26 C8 18 12 10 20 4 Z" fill="currentColor"/>
+          <path d="M20 6 L20 34" stroke="#EFEDE6" stroke-width="1.2"/>
+        </svg>
+        <div class="tb-name">sage<span style="color:var(--amber);font-style:normal">.</span></div>
+      </div>
+      <div class="tb-meta">
+        <a href="#mark">Identity</a>
+        <a href="#palette">Palette</a>
+        <a href="#type">Type</a>
+        <a href="#voice">Voice</a>
+        <a href="#product">Product</a>
+      </div>
+      <div class="tb-right">
+        <a href="app/" class="tb-cta">Open sage<span style="color:var(--amber)">.</span></a>
+      </div>
     </div>
-    <h1 class="hero-title">SAGE</h1>
-    <p class="hero-tagline">Talk to your schedule.</p>
-    <p class="hero-sub">
-      An AI scheduling assistant that converts natural conversation into a real schedule.
-      Built for students and professionals who'd rather talk than wrestle with calendars.
-    </p>
-    <div class="cta-row">
-      <a href="app/" class="btn btn-primary">🚀 Try SAGE now</a>
-      <a href="https://github.com/AbyzAnna/SAGE" class="btn btn-ghost" target="_blank" rel="noopener">View on GitHub</a>
-    </div>
-    <p class="hero-mini">Runs entirely in your browser. No signup, no API keys, free forever.</p>
-  </header>
+  </div>
+</div>
 
-  <section id="features" class="section">
-    <h2 class="section-title">What it does</h2>
-    <div class="features">
-      <div class="feature">
-        <div class="feature-icon">💬</div>
-        <h3>Talk or type</h3>
-        <p>Tell SAGE in plain English — by text, mic, or a hands-free voice call. It parses dates, times, durations, and priorities automatically.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">📞</div>
-        <h3>Voice call mode</h3>
-        <p>Tap Call and just talk. SAGE listens, replies out loud, and captures events from your stories in real time — even when you're rambling about your week.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">📅</div>
-        <h3>One-click calendar sync</h3>
-        <p>Export to .ics (Google, Apple, Outlook) or push individual events to Google Calendar in two clicks. No OAuth setup required.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">🔍</div>
-        <h3>Find free time</h3>
-        <p>Ask "find me 2 hours free this week" and SAGE scans your calendar, suggests open slots, and respects your working hours.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">🔔</div>
-        <h3>Reminders + countdowns</h3>
-        <p>Browser notifications fire 5 minutes before every event. A live "Today" widget shows what's next with a real-time countdown.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">⌨️</div>
-        <h3>Power-user keyboard</h3>
-        <p>Quick-add per day, inline edit, day/week toggle, search filter, undo, and full keyboard shortcuts (<kbd>?</kbd> for the cheat sheet).</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">🧘</div>
-        <h3>Stress-aware</h3>
-        <p>Highlights overloaded days, surfaces conflicts before you book them, and groups similar tasks so your week feels manageable.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">🔒</div>
-        <h3>Local & private</h3>
-        <p>Everything lives in your browser. No accounts, no API keys, no servers tracking you. Self-host the full Python+Ollama version for total air-gap.</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">✅</div>
-        <h3>Tested end-to-end</h3>
-        <p>19 Playwright tests cover the chat, calendar, voice, edit, search, undo, notifications, and export — they all pass in ~13s.</p>
-      </div>
-    </div>
-  </section>
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="frame">
+    <div class="corner tl"></div><div class="corner tr"></div>
 
-  <section id="how" class="section section-alt">
-    <h2 class="section-title">How it works</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <h3>Install Ollama</h3>
-        <p>Download from <a href="https://ollama.com" target="_blank" rel="noopener">ollama.com</a>, then pull the model:</p>
-        <pre><code>ollama pull llama3.2</code></pre>
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow" style="margin-bottom:32px">Brand Identity · A schedule that grows itself</div>
+        <div class="hero-word">sage<span class="dot"></span></div>
       </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <h3>Clone & install</h3>
-        <pre><code>git clone https://github.com/AbyzAnna/SAGE.git
-cd SAGE
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt</code></pre>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <h3>Run it</h3>
-        <pre><code>python3 backend/main.py</code></pre>
-        <p>Open <code>http://localhost:8000</code> and start chatting.</p>
+
+      <div class="hero-meta">
+        <div class="row"><div class="k">Index</div><div class="v">01 — 06</div></div>
+        <div class="row"><div class="k">Format</div><div class="v">Identity guide</div></div>
+        <div class="row"><div class="k">Filed</div><div class="v">May, 2026</div></div>
       </div>
     </div>
 
-    <div class="examples">
-      <h3>Try saying</h3>
-      <ul>
-        <li>"Block out 2 hours tomorrow morning for studying calculus."</li>
-        <li>"I have a dentist appointment Thursday at 3pm."</li>
-        <li>"Plan my week — I need 10 hours of project work and a workout every other day."</li>
-        <li>"What's on my schedule Friday?"</li>
-        <li>"Move my 4pm meeting to 5pm."</li>
-      </ul>
+    <div class="hero-sub">
+      <div class="hero-tag">A calendar that <em>listens</em>, not one you click.</div>
+      <div>
+        <div class="hero-desc">SAGE is a local, private scheduling assistant. You write a sentence — <span class="italic" style="color:var(--moss)">"study calc tomorrow 2–4, dentist Thursday 3pm"</span> — and a real, structured week assembles itself.</div>
+        <div class="hero-desc">No cloud. No API keys. No subscription. The model lives on your machine, so your week stays yours.</div>
+        <div class="pill-row">
+          <a href="app/" class="pill solid">Try sage. now →</a>
+          <a href="https://github.com/AbyzAnna/SAGE" target="_blank" rel="noopener" class="pill">Open source · MIT</a>
+          <span class="pill">Runs locally · llama 3.2</span>
+          <span class="pill">Voice + call mode</span>
+        </div>
+      </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section id="stack" class="section">
-    <h2 class="section-title">Built with</h2>
-    <div class="stack">
-      <div class="tech"><strong>FastAPI</strong> — Python backend + WebSockets</div>
-      <div class="tech"><strong>Ollama + llama3.2</strong> — local LLM, free, 2GB</div>
-      <div class="tech"><strong>SQLite</strong> — event storage</div>
-      <div class="tech"><strong>Vanilla HTML/CSS/JS</strong> — no build step, no framework lock-in</div>
+<!-- ============ 01 — THE MARK ============ -->
+<section class="sec" id="mark">
+  <div class="frame">
+    <div class="sec-head">
+      <div class="sec-num">01 / Identity</div>
+      <div class="sec-title">The <em>mark</em>.</div>
+      <div class="sec-note">One leaf. One stem. A growing thing — like a week that organizes itself as you describe it.</div>
     </div>
-  </section>
 
-  <footer class="footer">
-    <p>SAGE is open source.
-      <a href="https://github.com/AbyzAnna/SAGE" target="_blank" rel="noopener">View the code on GitHub →</a>
-    </p>
-    <p class="footer-small">Made with care. Runs on your machine. Your data stays yours.</p>
-  </footer>
+    <div class="mark-grid">
+      <div class="mark-cell">
+        <div class="head"><div class="lbl">Primary lockup</div><div class="num">01·a</div></div>
+        <div class="body">
+          <div class="lockup-primary">
+            <svg width="120" height="140" viewBox="0 0 120 140" fill="none" aria-hidden="true">
+              <path d="M60 8 C90 32 102 64 102 88 C102 110 84 128 60 128 C36 128 18 110 18 88 C18 64 30 32 60 8 Z" fill="#1F3D2E"/>
+              <path d="M60 14 L60 124" stroke="#EFEDE6" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M60 48 Q42 56 30 80" stroke="#EFEDE6" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".7"/>
+              <path d="M60 48 Q78 56 90 80" stroke="#EFEDE6" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".7"/>
+              <path d="M60 76 Q46 84 38 102" stroke="#EFEDE6" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".5"/>
+              <path d="M60 76 Q74 84 82 102" stroke="#EFEDE6" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".5"/>
+            </svg>
+            <div class="wm" style="color:var(--forest)">sage<span style="color:var(--amber);font-style:normal">.</span></div>
+          </div>
+        </div>
+        <div class="mark-foot">Used at brand-level: site headers, app launch, hero moments. The full stop is the period after "Done."</div>
+      </div>
 
-  <script>
-    // Mirror the hero logo into the nav after the page loads
-    document.addEventListener('DOMContentLoaded', () => {
-      const heroImg = document.getElementById('logo-img');
-      const navLogo = document.getElementById('nav-logo');
-      const useImage = heroImg && heroImg.complete && heroImg.naturalWidth > 0;
-      if (useImage) {
-        navLogo.style.backgroundImage = `url(${heroImg.src})`;
-        navLogo.classList.add('nav-logo--img');
-      } else {
-        navLogo.textContent = 'S';
-      }
-    });
-  </script>
+      <div class="mark-cell dark">
+        <div class="head"><div class="lbl">Monogram · reversed</div><div class="num">01·b</div></div>
+        <div class="body">
+          <div class="lockup-stack">
+            <svg width="96" height="112" viewBox="0 0 120 140" fill="none" aria-hidden="true">
+              <path d="M60 8 C90 32 102 64 102 88 C102 110 84 128 60 128 C36 128 18 110 18 88 C18 64 30 32 60 8 Z" fill="#A3B89B"/>
+              <path d="M60 14 L60 124" stroke="#16170F" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M60 48 Q42 56 30 80" stroke="#16170F" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".7"/>
+              <path d="M60 48 Q78 56 90 80" stroke="#16170F" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".7"/>
+            </svg>
+            <div class="tag">A · I · scheduling</div>
+          </div>
+        </div>
+        <div class="mark-foot">App icons, favicons, dark UI, video bumpers. The leaf carries the whole weight of the brand on its own.</div>
+      </div>
+
+      <div class="mark-cell green">
+        <div class="head"><div class="lbl">Wordmark</div><div class="num">01·c</div></div>
+        <div class="body">
+          <div style="font-family:var(--serif);font-style:italic;font-size:clamp(72px,9vw,108px);line-height:.85;letter-spacing:-.025em;color:var(--cream);white-space:nowrap">sage<span style="color:var(--amber);font-style:normal">.</span></div>
+        </div>
+        <div class="mark-foot">For inline mentions, body copy, captions. Always lowercase. The period is non-negotiable.</div>
+      </div>
+    </div>
+
+    <div class="construction">
+      <div class="con-art">
+        <svg viewBox="0 0 300 300" fill="none" aria-hidden="true">
+          <g stroke="rgba(22,23,15,.12)" stroke-width="1">
+            <line x1="0" y1="50" x2="300" y2="50"/>
+            <line x1="0" y1="100" x2="300" y2="100"/>
+            <line x1="0" y1="150" x2="300" y2="150"/>
+            <line x1="0" y1="200" x2="300" y2="200"/>
+            <line x1="0" y1="250" x2="300" y2="250"/>
+            <line x1="50" y1="0" x2="50" y2="300"/>
+            <line x1="100" y1="0" x2="100" y2="300"/>
+            <line x1="150" y1="0" x2="150" y2="300"/>
+            <line x1="200" y1="0" x2="200" y2="300"/>
+            <line x1="250" y1="0" x2="250" y2="300"/>
+          </g>
+          <circle cx="150" cy="170" r="100" stroke="rgba(31,61,46,.25)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+          <circle cx="150" cy="40" r="6" fill="#C68B3F"/>
+          <path d="M150 30 C220 80 240 140 240 180 C240 220 200 250 150 250 C100 250 60 220 60 180 C60 140 80 80 150 30 Z" fill="#1F3D2E"/>
+          <path d="M150 38 L150 246" stroke="#EFEDE6" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M150 110 Q110 124 84 174" stroke="#EFEDE6" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".7"/>
+          <path d="M150 110 Q190 124 216 174" stroke="#EFEDE6" stroke-width="1.2" stroke-linecap="round" fill="none" opacity=".7"/>
+          <circle cx="150" cy="30" r="3" fill="#C68B3F"/>
+          <circle cx="150" cy="250" r="3" fill="#C68B3F"/>
+          <circle cx="60" cy="180" r="3" fill="#C68B3F"/>
+          <circle cx="240" cy="180" r="3" fill="#C68B3F"/>
+        </svg>
+      </div>
+      <div class="con-text">
+        <div class="eyebrow">Construction</div>
+        <h4>Drawn from a single seed point, the leaf <em>grows</em> downward — wider as it descends, like a week filling in.</h4>
+        <p>The mark is built on a 6-unit grid. Two arcs meet at the tip (apex) and base (root). The vertical vein is exactly 1.6px at production scale and divides the form into perfect symmetry.</p>
+        <div>
+          <div class="spec-row"><div class="k">Aspect</div><div class="v">5 : 6 (narrower than tall)</div></div>
+          <div class="spec-row"><div class="k">Vein weight</div><div class="v">1.6px @ 120px height</div></div>
+          <div class="spec-row"><div class="k">Min size</div><div class="v">16px square (favicon)</div></div>
+          <div class="spec-row"><div class="k">Clear space</div><div class="v">½ leaf-width on all sides</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 — PALETTE ============ -->
+<section class="sec" id="palette">
+  <div class="frame">
+    <div class="sec-head">
+      <div class="sec-num">02 / System</div>
+      <div class="sec-title"><em>Five</em> colors. No more.</div>
+      <div class="sec-note">Borrowed from the herb garden after rain. Forest does the heavy lifting; amber arrives only as punctuation.</div>
+    </div>
+
+    <div class="pal-grid">
+      <div class="pal pal-forest">
+        <div class="top"><div class="role">Primary</div><div class="num">01</div></div>
+        <div>
+          <div class="name">Forest</div>
+          <div class="hex">#1F3D2E</div>
+          <div class="use">Logo. Headlines. Anything load-bearing.</div>
+        </div>
+      </div>
+      <div class="pal pal-cream">
+        <div class="top"><div class="role">Surface</div><div class="num">02</div></div>
+        <div>
+          <div class="name">Paper</div>
+          <div class="hex">#EFEDE6</div>
+          <div class="use">The default canvas. Warm, not white.</div>
+        </div>
+      </div>
+      <div class="pal pal-sage">
+        <div class="top"><div class="role">Accent</div><div class="num">03</div></div>
+        <div>
+          <div class="name">Sage</div>
+          <div class="hex">#A3B89B</div>
+          <div class="use">Calm states. Event chips. Confirmations.</div>
+        </div>
+      </div>
+      <div class="pal pal-amber">
+        <div class="top"><div class="role">Signal</div><div class="num">04</div></div>
+        <div>
+          <div class="name">Amber</div>
+          <div class="hex">#C68B3F</div>
+          <div class="use">Conflicts, overloads, the moment to pause.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pal-row2">
+      <div class="swatch" style="background:#0B1A12"><span>Forest 900</span><span>0B1A12</span></div>
+      <div class="swatch" style="background:#1F3D2E"><span>Forest 700</span><span>1F3D2E</span></div>
+      <div class="swatch" style="background:#2F4A3C"><span>Moss 600</span><span>2F4A3C</span></div>
+      <div class="swatch light" style="background:#7BA88B"><span>Sage 500</span><span>7BA88B</span></div>
+      <div class="swatch light" style="background:#A3B89B"><span>Sage 400</span><span>A3B89B</span></div>
+      <div class="swatch light" style="background:#C4D2BC"><span>Sage 300</span><span>C4D2BC</span></div>
+      <div class="swatch light" style="background:#EFEDE6"><span>Paper</span><span>EFEDE6</span></div>
+      <div class="swatch" style="background:#16170F"><span>Ink</span><span>16170F</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 — TYPOGRAPHY ============ -->
+<section class="sec" id="type">
+  <div class="frame">
+    <div class="sec-head">
+      <div class="sec-num">03 / System</div>
+      <div class="sec-title">Two voices, <em>in conversation</em>.</div>
+      <div class="sec-note">A serif that thinks aloud, a sans that gets things done. Plus monospace for the receipts.</div>
+    </div>
+
+    <div class="type-grid">
+      <div class="type-cell">
+        <div class="meta"><div class="l">Display — Instrument Serif</div><div class="r">Italic · 400</div></div>
+        <div class="specimen-serif">Aa</div>
+        <div class="ladder">
+          <div class="row serif"><div class="size">96 px</div><div class="sample" style="font-size:54px;font-style:italic;line-height:1">tomorrow, <em>at three</em>.</div></div>
+          <div class="row serif"><div class="size">48 px</div><div class="sample" style="font-size:32px;font-style:italic;line-height:1.1">"Move my 4pm to <em>5</em>."</div></div>
+          <div class="row serif"><div class="size">24 px</div><div class="sample" style="font-size:20px;font-style:italic;line-height:1.2">A schedule that grows itself.</div></div>
+        </div>
+      </div>
+
+      <div class="type-cell" style="background:var(--cream)">
+        <div class="meta"><div class="l">Text — Geist</div><div class="r">300 / 400 / 500 / 600</div></div>
+        <div class="specimen-sans">Aa</div>
+        <div class="ladder">
+          <div class="row sans"><div class="size">22 px</div><div class="sample" style="font-size:22px;font-weight:500;line-height:1.2">Study calc · 2:00–4:00pm</div></div>
+          <div class="row sans"><div class="size">16 px</div><div class="sample" style="font-size:16px;font-weight:400;line-height:1.5">Auto-classified as <em>study</em>. No conflicts on Tuesday.</div></div>
+          <div class="row sans"><div class="size">13 px</div><div class="sample" style="font-size:13px;font-weight:400;line-height:1.5;color:var(--ink-2)">Saved locally · synced to 2 tabs · llama 3.2</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="type-foot">
+      <div class="cell">
+        <div class="h">Pairing rule</div>
+        <div class="b">Serif speaks <em>about</em> the user's life. Sans speaks <em>to</em> the user. Never reverse the roles.</div>
+      </div>
+      <div class="cell">
+        <div class="h">Capitalisation</div>
+        <div class="b">Headlines: sentence case. Wordmark: lowercase, always. Mono labels: UPPER · TRACKED.</div>
+      </div>
+      <div class="cell">
+        <div class="h">Monospace — Geist Mono</div>
+        <div class="b" style="font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;color:var(--ink)">11:00 — 12:30 · STUDY<br>14:00 — 16:00 · DEEP WORK<br>17:00 — 17:45 · DENTIST</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 — VOICE / IN PRACTICE ============ -->
+<section class="sec" id="voice">
+  <div class="frame">
+    <div class="sec-head">
+      <div class="sec-num">04 / Voice</div>
+      <div class="sec-title">In <em>practice</em>.</div>
+      <div class="sec-note">SAGE's voice is the calm friend who already understands what you mean — and gently shows you the receipts.</div>
+    </div>
+
+    <div class="voice-grid">
+      <div class="voice-left">
+        <div class="eyebrow">Principles</div>
+        <h3>Speak in <em>full sentences</em>. Answer in <em>structured calm</em>.</h3>
+        <p>Users describe their lives the way they think — half-formed, run-on, abbreviated. SAGE never asks them to slow down or reformat. It listens, then quietly produces a real schedule, with the parsing shown as a receipt the user can verify.</p>
+        <p style="color:var(--ink)"><em class="serif" style="font-size:22px">Tone:</em> warm, brief, never cute. Confirms what it did. Surfaces what it didn't. Apologises once, fixes it, moves on.</p>
+        <div style="margin-top:auto;padding-top:24px;border-top:1px solid var(--rule-soft);font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)">
+          Never · "I'd be happy to" · "Certainly!" · emoji · exclamation marks
+        </div>
+      </div>
+
+      <div class="voice-right">
+        <div class="vr-head">
+          <div class="l">conversation · monday 09:14</div>
+          <div class="r"><div class="dot"></div>local · llama 3.2</div>
+        </div>
+
+        <div class="bubble user">study calc tomorrow 2-4pm, dentist thursday 3, and i need to finish the design brief by friday — that one's important</div>
+
+        <div class="bubble sage">
+          Done. Added <strong>three events</strong>, no conflicts.
+          <div class="parse">
+            <div class="ev"><span class="swatch" style="background:#7BA88B"></span><span class="ttl">Study · Calculus</span><span class="cat">study</span><span class="meta">Tue 14:00–16:00</span></div>
+            <div class="ev"><span class="swatch" style="background:#C68B3F"></span><span class="ttl">Dentist</span><span class="cat">health</span><span class="meta">Thu 15:00–15:45</span></div>
+            <div class="ev"><span class="swatch" style="background:#2F4A3C"></span><span class="ttl">Finish design brief</span><span class="cat">work · high</span><span class="meta">Fri ends 17:00</span></div>
+          </div>
+        </div>
+
+        <div class="bubble user">actually move the calc study to 3-5, i have lunch with sam at 2</div>
+
+        <div class="bubble sage">
+          Moved. <strong>Calc study</strong> is now Tue 15:00–17:00. Should I add lunch with Sam at 14:00?
+        </div>
+      </div>
+    </div>
+
+    <div class="voice-rules">
+      <div class="vr-cell">
+        <div class="n">01</div>
+        <div class="t">Echo, don't <em>parrot</em>.</div>
+        <div class="d">Confirm the action in your own words — not a verbatim repeat of the user's input.</div>
+      </div>
+      <div class="vr-cell">
+        <div class="n">02</div>
+        <div class="t">Show the <em>receipt</em>.</div>
+        <div class="d">Every change comes with a structured summary the user can scan and verify in under two seconds.</div>
+      </div>
+      <div class="vr-cell">
+        <div class="n">03</div>
+        <div class="t">Offer the <em>next move</em>.</div>
+        <div class="d">When you catch an adjacent intent, ask once — never assume, never nag.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 — PRODUCT PEEK ============ -->
+<section class="sec" id="product">
+  <div class="frame">
+    <div class="sec-head">
+      <div class="sec-num">05 / Product</div>
+      <div class="sec-title">The <em>week</em>, assembled.</div>
+      <div class="sec-note">Color-coded by category. Conflicts dashed in amber. Overloaded days flagged in the header — never in the events themselves.</div>
+    </div>
+
+    <div class="product-wrap">
+      <div class="product-bar">
+        <div class="l">
+          <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M20 4 C28 10 32 18 32 26 C32 32 26 36 20 36 C14 36 8 32 8 26 C8 18 12 10 20 4 Z" fill="currentColor"/>
+            <path d="M20 6 L20 34" stroke="#EFEDE6" stroke-width="1.2"/>
+          </svg>
+          <div class="name">sage<span style="color:var(--amber);font-style:normal">.</span></div>
+        </div>
+        <div class="r">
+          <div class="nav">
+            <div class="arr">‹</div>
+            <div class="wk">Week 21 · May 18 — 24, 2026</div>
+            <div class="arr">›</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px"><div style="width:7px;height:7px;border-radius:50%;background:#7BA88B;box-shadow:0 0 0 3px rgba(123,168,139,.2)"></div>SYNCED · 2 TABS</div>
+        </div>
+      </div>
+
+      <div class="cal">
+        <div class="col-h" style="grid-column:1"><div class="day">&nbsp;</div><div class="date">&nbsp;</div></div>
+        <div class="col-h"><div class="day">Mon</div><div class="date">18</div></div>
+        <div class="col-h today"><div class="day">Tue · today</div><div class="date">19</div></div>
+        <div class="col-h"><div class="day">Wed</div><div class="date">20</div></div>
+        <div class="col-h overload"><div class="day">Thu · 11 hrs</div><div class="date">21</div></div>
+        <div class="col-h"><div class="day">Fri</div><div class="date">22</div></div>
+        <div class="col-h"><div class="day">Sat</div><div class="date">23</div></div>
+        <div class="col-h"><div class="day">Sun</div><div class="date">24</div></div>
+
+        <div class="time-col">
+          <div class="t">9</div><div class="t">10</div><div class="t">11</div><div class="t">12</div>
+          <div class="t">13</div><div class="t">14</div><div class="t">15</div><div class="t">16</div>
+          <div class="t">17</div><div class="t">18</div>
+        </div>
+
+        <div class="day-col">
+          <div class="cal-ev ev-work" style="top:48px;height:96px"><div class="t">Team standup</div><div class="m">10:00 — 11:30 · work</div></div>
+          <div class="cal-ev ev-deep" style="top:192px;height:144px"><div class="t">Deep work · spec</div><div class="m">13:00 — 16:00 · work</div></div>
+          <div class="cal-ev ev-personal" style="top:384px;height:72px"><div class="t">Run</div><div class="m">17:00 — 18:15 · health</div></div>
+        </div>
+        <div class="day-col">
+          <div class="cal-ev ev-social" style="top:96px;height:96px"><div class="t">Lunch · Sam</div><div class="m">11:00 — 12:30 · social</div></div>
+          <div class="cal-ev ev-study" style="top:240px;height:96px"><div class="t">Study · Calc</div><div class="m">15:00 — 17:00 · study</div></div>
+        </div>
+        <div class="day-col">
+          <div class="cal-ev ev-deep" style="top:0;height:144px"><div class="t">Writing block</div><div class="m">09:00 — 12:00 · deep</div></div>
+          <div class="cal-ev ev-work" style="top:168px;height:72px"><div class="t">Design review</div><div class="m">12:30 — 13:30 · work</div></div>
+          <div class="cal-ev ev-personal" style="top:336px;height:48px"><div class="t">Therapy</div><div class="m">16:00 — 17:00 · personal</div></div>
+        </div>
+        <div class="day-col">
+          <div class="cal-ev ev-work" style="top:0;height:96px"><div class="t">All-hands</div><div class="m">09:00 — 11:00 · work</div></div>
+          <div class="cal-ev ev-conflict" style="top:120px;height:72px"><div class="t">⚠ Conflict · two events</div><div class="m">11:30 — 13:00 · review</div></div>
+          <div class="cal-ev ev-health" style="top:240px;height:36px"><div class="t">Dentist</div><div class="m">15:00 — 15:45</div></div>
+          <div class="cal-ev ev-deep" style="top:288px;height:120px"><div class="t">Project · ship v2</div><div class="m">16:00 — 18:30</div></div>
+        </div>
+        <div class="day-col">
+          <div class="cal-ev ev-study" style="top:48px;height:96px"><div class="t">Reading · CS</div><div class="m">10:00 — 11:30</div></div>
+          <div class="cal-ev ev-deep" style="top:192px;height:168px"><div class="t">Finish design brief</div><div class="m">13:00 — 17:00 · high</div></div>
+        </div>
+        <div class="day-col">
+          <div class="cal-ev ev-social" style="top:144px;height:96px"><div class="t">Brunch</div><div class="m">12:00 — 13:30 · social</div></div>
+          <div class="cal-ev ev-personal" style="top:288px;height:96px"><div class="t">Hike</div><div class="m">15:00 — 17:00 · health</div></div>
+        </div>
+        <div class="day-col">
+          <div class="cal-ev ev-personal" style="top:96px;height:48px"><div class="t">Plan the week</div><div class="m">11:00 — 12:00 · personal</div></div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="k"><span class="sw" style="background:#C4D2BC"></span>Study</div>
+        <div class="k"><span class="sw" style="background:#A3B89B"></span>Work</div>
+        <div class="k"><span class="sw" style="background:#7BA88B"></span>Deep / focus</div>
+        <div class="k"><span class="sw" style="background:#E8D9C2"></span>Personal</div>
+        <div class="k"><span class="sw" style="background:#C68B3F"></span>Health</div>
+        <div class="k"><span class="sw" style="background:#E0C6CC"></span>Social</div>
+        <div class="k"><span class="sw" style="background:#fff;border:1.5px dashed var(--earth)"></span>Conflict</div>
+      </div>
+    </div>
+
+    <div class="feats">
+      <div class="feat">
+        <div class="n">F · 01</div>
+        <div class="t">Conversation <em>→ schedule</em></div>
+        <div class="d">Plain sentences become structured events — dates, durations, titles, all parsed.</div>
+      </div>
+      <div class="feat">
+        <div class="n">F · 02</div>
+        <div class="t">Smart <em>categorization</em></div>
+        <div class="d">Study, work, personal, health, social — assigned by context, not by tags.</div>
+      </div>
+      <div class="feat">
+        <div class="n">F · 03</div>
+        <div class="t">Conflict <em>+ overload</em></div>
+        <div class="d">Two things, one slot? Warned. Ten hours on Thursday? Flagged in amber.</div>
+      </div>
+      <div class="feat">
+        <div class="n">F · 04</div>
+        <div class="t">Local, <em>real-time</em></div>
+        <div class="d">Edit one tab, every tab updates. The model and your data both stay on your machine.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 — MANIFESTO / FOOTER ============ -->
+<section class="manifesto" id="manifesto">
+  <div class="frame">
+    <div class="eyebrow">06 / The promise</div>
+    <div class="mani-grid">
+      <div class="mani-lead">
+        Your week is <em>yours</em>.<br>
+        Your data is <em>yours</em>.<br>
+        Your calendar should <em>listen</em>.
+      </div>
+      <div class="mani-side">
+        <p>SAGE is not a SaaS. It is a small piece of software that lives on your machine and writes down what you tell it.</p>
+        <p>There is no account. There is no cloud. There is no growth target, no upsell, no engagement loop.</p>
+        <p>There is a model, a calendar, and you — <em>describing your week out loud until the week exists.</em></p>
+        <div style="margin-top:32px;display:flex;gap:10px;flex-wrap:wrap">
+          <a href="app/" class="mani-cta primary">Try sage. now →</a>
+          <a href="https://github.com/AbyzAnna/SAGE" target="_blank" rel="noopener" class="mani-cta">View on GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="commit">
+      <div class="c">
+        <div class="n">Commitment · 01</div>
+        <div class="t"><em>Local</em>-first</div>
+        <div class="d">The AI runs on your hardware via Ollama. Nothing leaves the machine.</div>
+      </div>
+      <div class="c">
+        <div class="n">Commitment · 02</div>
+        <div class="t"><em>Free</em>, forever</div>
+        <div class="d">Open-source, MIT-friendly. No tier, no trial, no card.</div>
+      </div>
+      <div class="c">
+        <div class="n">Commitment · 03</div>
+        <div class="t"><em>Honest</em> about its work</div>
+        <div class="d">Every parsed event is shown as a receipt you can scan and undo.</div>
+      </div>
+      <div class="c">
+        <div class="n">Commitment · 04</div>
+        <div class="t"><em>Quiet</em> by default</div>
+        <div class="d">No notifications, no nudges. The calendar speaks when spoken to.</div>
+      </div>
+    </div>
+
+    <div class="colophon">
+      <div class="l">
+        <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <path d="M20 4 C28 10 32 18 32 26 C32 32 26 36 20 36 C14 36 8 32 8 26 C8 18 12 10 20 4 Z" fill="currentColor"/>
+          <path d="M20 6 L20 34" stroke="#1F3D2E" stroke-width="1.2"/>
+        </svg>
+        <span>sage · brand guide · v 1.0 · may 2026</span>
+      </div>
+      <div class="r">
+        <span>Instrument Serif</span>
+        <span>Geist</span>
+        <span>llama 3.2 · ollama</span>
+      </div>
+    </div>
+  </div>
+</section>
+
 </body>
 </html>

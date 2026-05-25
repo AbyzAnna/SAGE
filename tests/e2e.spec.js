@@ -36,8 +36,8 @@ test.describe("SAGE end-to-end", () => {
   }
 
   test("01 — page loads with chat starter and zero events", async ({ page }) => {
-    await expect(page.locator('h1').first()).toHaveText("SAGE");
-    await expect(page.locator('.message--bot .bubble').first()).toContainText(/Hey,? I'm SAGE/i);
+    await expect(page.locator('h1').first()).toContainText(/sage/i);
+    await expect(page.locator('.message--bot .bubble').first()).toContainText(/Tell me what's on your mind/i);
     await expect(page.locator('[data-testid="stat-count"]')).toContainText("0 events");
     await expect(page.locator('[data-testid="stat-hours"]')).toContainText("0.0 h");
     await expect(page.locator('[data-testid="stat-deadlines"]')).toContainText("0 high-priority");
@@ -224,7 +224,7 @@ test.describe("SAGE end-to-end", () => {
     await page.locator("body").click();  // ensure no input is focused
     await page.keyboard.press("?");
     await expect(page.locator("#help-modal")).toHaveAttribute("aria-hidden", "false");
-    await expect(page.locator("#help-modal")).toContainText(/keyboard shortcuts/i);
+    await expect(page.locator("#help-modal")).toContainText(/shortcuts/i);
     await page.keyboard.press("Escape");
     await expect(page.locator("#help-modal")).toHaveAttribute("aria-hidden", "true");
   });
