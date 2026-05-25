@@ -235,4 +235,54 @@ test.describe("SAGE end-to-end", () => {
     await chip.click();
     await expect(page.locator('[data-testid="chat-input"]')).toHaveValue(prompt);
   });
+
+  // ---------- wellbeing suggestions ----------
+
+  test("20 — 'I had a long day' surfaces multiple suggestion chips", async ({ page }) => {
+    await send(page, "ugh I had such a long day");
+    const actions = page.locator('[data-testid="suggestion-actions"]');
+    await expect(actions).toBeVisible();
+    // At least 4 distinct options (tired catalog has 5)
+    await expect(actions.locator('[data-testid="suggest-chip"]')).toHaveCount(5);
+    // Should mention recovery options like spa / nap / takeout
+    await expect(actions).toContainText(/spa|massage/i);
+    await expect(actions).toContainText(/nap/i);
+    await expect(actions).toContainText(/takeout|deliver|doordash/i);
+  });
+
+  test("21 — Clicking a 'find nearby' chip opens Google Maps in a new tab", async ({ page, context }) => {
+    await send(page, "I'm exhausted");
+    const findChip = page.locator('[data-testid="suggest-chip"]', { hasText: /spa|massage/i }).first();
+    const [popup] = await Promise.all([
+      context.waitForEvent("page"),
+      findChip.click(),
+    ]);
+    await popup.waitForLoadState("domcontentloaded", { timeout: 10000 }).catch(() => {});
+    expect(popup.url()).toContain("google.com/maps");
+    expect(popup.url()).toMatch(/spa|massage/i);
+    await popup.close();
+  });
+
+  test("22 — Clicking a 'schedule' chip adds a low-priority personal event", async ({ page }) => {
+    await send(page, "I'm completely drained");
+    const napChip = page.locator('[data-testid="suggest-chip"]', { hasText: /nap/i }).first();
+    await napChip.click();
+    // Toast confirms the add
+    await expect(page.locator('[data-testid="toast"]')).toContainText(/added/i);
+    // Nap is scheduled "in 5 min" → same day as NOW (2026-05-23)
+    const dayCell = page.locator('[data-testid="day-2026-05-23"]');
+    await expect(dayCell.locator('.event--personal')).toHaveCount(1);
+    await expect(dayCell.locator('.event').first()).toContainText(/nap/i);
+  });
+
+  test("23 — Wellbeing detection and event extraction work in the same message", async ({ page }) => {
+    await send(page, "I'm so stressed and I have a meeting tomorrow at 9am");
+    // Both must happen: suggestion bubble appears AND the meeting is on the calendar
+    await expect(page.locator('[data-testid="suggestion-actions"]')).toBeVisible();
+    await expect(page.locator('[data-testid="suggest-chip"]').first()).toBeVisible();
+    // NOW=Sat May 23 → "tomorrow" = Sun May 24
+    const cell = page.locator('[data-testid="day-2026-05-24"]');
+    await expect(cell.locator('.event')).toHaveCount(1);
+    await expect(cell.locator('.event').first()).toContainText(/meeting/i);
+  });
 });

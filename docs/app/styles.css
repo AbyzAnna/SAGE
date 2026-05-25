@@ -263,6 +263,85 @@ kbd {
   border-color: var(--forest);
 }
 
+/* ============ wellbeing suggestion bubble ============ */
+.bubble--suggestions {
+  background: var(--cream);
+  border: 1px solid var(--rule-soft);
+  padding: 18px 20px;
+  max-width: 96%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-bottom-left-radius: 4px;
+}
+.suggestion-empathy {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 19px;
+  line-height: 1.4;
+  color: var(--ink);
+  margin: 0;
+}
+.suggestion-empathy em { color: var(--moss); }
+.suggestion-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.suggest-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid var(--rule-soft);
+  color: var(--ink);
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+.suggest-chip:hover {
+  background: var(--forest);
+  color: var(--cream);
+  border-color: var(--forest);
+  transform: translateX(2px);
+}
+.suggest-chip-icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 22px;
+  text-align: center;
+}
+.suggest-chip-label {
+  flex: 1;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.suggest-chip-meta {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+.suggest-chip:hover .suggest-chip-meta { opacity: 0.75; }
+.suggestion-foot {
+  margin: 4px 0 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  opacity: 0.7;
+}
+
 .chat-form {
   display: flex; gap: 8px;
   padding: 16px 18px 20px;

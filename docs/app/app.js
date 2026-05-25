@@ -224,6 +224,263 @@
     return ev;
   }
 
+  // ---------- wellbeing engine ----------
+  // Detects emotional/situational cues in the user's message and offers
+  // multiple concrete solutions per problem. Each solution is one of:
+  //   • find     — opens Google Maps search for nearby places
+  //   • link     — opens a specific URL (delivery apps, therapy directories)
+  //   • schedule — adds a low-priority event at a sensible time
+  //   • tip      — surfaces a short text suggestion via toast
+  const SUGGESTIONS = {
+    tired: {
+      cue: /(long\s+day|exhausted|drained|wiped\s*out|so\s+tired|tired\s+as|burned?\s*out|spent|knackered|fried|dead\s+tired)/i,
+      empathy: "Sounds like a brutal day. Try one of these to recover the rest of your evening.",
+      options: [
+        { kind:"find",     icon:"📍", label:"Find cheap spas & massage near you", query:"affordable spa massage near me" },
+        { kind:"schedule", icon:"😴", label:"30-min nap now",                     mins:30, in:5,        cat:"personal", title:"Quick nap" },
+        { kind:"schedule", icon:"🌙", label:"Early bedtime tonight (10pm)",      mins:60, at:"22:00",  cat:"personal", title:"Early bedtime" },
+        { kind:"link",     icon:"🍱", label:"Order takeout (DoorDash)",           url:"https://www.doordash.com" },
+        { kind:"tip",      icon:"💡", label:"Hot shower + dim the lights",        text:"Heat releases muscle tension. Phones in the next room." },
+      ],
+    },
+    stressed: {
+      cue: /(stressed|overwhelmed|freak(ing|ed)\s*out|can'?t\s*cope|too\s*much|losing\s+it|anxious|anxiety|panic)/i,
+      empathy: "That's a lot to hold. Try one of these to come down a notch.",
+      options: [
+        { kind:"schedule", icon:"🚶", label:"10-min walk outside (now)",          mins:10, in:0,        cat:"personal", title:"Decompress walk" },
+        { kind:"find",     icon:"🌳", label:"Find a quiet park near you",         query:"quiet park near me" },
+        { kind:"tip",      icon:"🌬️", label:"Box breathing for 2 minutes",        text:"Breathe in 4 · hold 4 · out 4 · hold 4. Eight rounds." },
+        { kind:"link",     icon:"🧠", label:"Find a therapist (Psychology Today)", url:"https://www.psychologytoday.com/us/therapists" },
+        { kind:"schedule", icon:"🛋️", label:"Block 30 min of free time tomorrow", mins:30, tomorrow:true, atHour:"18:00", cat:"personal", title:"Decompress block" },
+      ],
+    },
+    hungry: {
+      cue: /(hungry|starving|haven'?t\s+eaten|skipped\s+(lunch|dinner|breakfast|meal)|no\s+time\s+to\s+eat|need\s+food)/i,
+      empathy: "Let's get food into you. A few options:",
+      options: [
+        { kind:"find",     icon:"📍", label:"Cheap eats near you",                 query:"cheap restaurants near me" },
+        { kind:"link",     icon:"🛵", label:"Order delivery (Uber Eats)",          url:"https://www.ubereats.com" },
+        { kind:"link",     icon:"🛒", label:"Quick groceries (Instacart)",         url:"https://www.instacart.com" },
+        { kind:"schedule", icon:"🥗", label:"Meal-prep block this weekend",        mins:60, weekend:true, atHour:"10:00", cat:"personal", title:"Meal prep" },
+        { kind:"tip",      icon:"💡", label:"A protein snack right now",           text:"Greek yogurt, nuts, an egg — protein > sugar, holds you longer." },
+      ],
+    },
+    unfocused: {
+      cue: /(can'?t\s+focus|distracted|can'?t\s+concentrate|brain\s+fog|procrastinat|unproductive|spacing\s+out)/i,
+      empathy: "Focus is fragile. Try changing one variable.",
+      options: [
+        { kind:"find",     icon:"☕", label:"Find a quiet coffee shop nearby",     query:"quiet coffee shop with wifi near me" },
+        { kind:"find",     icon:"📚", label:"Find a library nearby",               query:"public library near me" },
+        { kind:"schedule", icon:"⏱️", label:"25-min Pomodoro now",                  mins:25, in:0,        cat:"work",     title:"Pomodoro · focus" },
+        { kind:"tip",      icon:"🚪", label:"5-min rule",                           text:"Commit to just 5 minutes. Momentum does the rest." },
+        { kind:"schedule", icon:"🚶", label:"10-min walk break (now)",              mins:10, in:0,        cat:"personal", title:"Walk break" },
+      ],
+    },
+    lonely: {
+      cue: /(lonely|alone|isolated|miss(\s+my|ing)\s+(friends|family|people)|no\s+one\s+to)/i,
+      empathy: "Reaching out helps — even a little.",
+      options: [
+        { kind:"schedule", icon:"📞", label:"Call a friend tonight (8pm)",          mins:30, at:"20:00",  cat:"social",  title:"Call a friend" },
+        { kind:"link",     icon:"🤝", label:"Find local meetups (Meetup.com)",      url:"https://www.meetup.com" },
+        { kind:"find",     icon:"📍", label:"Find community events nearby",         query:"community events this week near me" },
+        { kind:"schedule", icon:"☕", label:"Coffee with someone this weekend",      mins:60, weekend:true, atHour:"11:00", cat:"social",  title:"Coffee w/ a friend" },
+        { kind:"tip",      icon:"💌", label:"Text one person you miss",             text:"Pick the easiest one. \"Was thinking of you\" is plenty." },
+      ],
+    },
+    sad: {
+      cue: /(\bsad\b|down|depressed|crying|heartbroken|heart\s*broke|broke\s+up|broken\s+up|grieving)/i,
+      empathy: "I'm sorry. Here are a few gentle things that often help.",
+      options: [
+        { kind:"schedule", icon:"☀️", label:"20-min walk in sunlight (today)",     mins:20, in:30,       cat:"personal", title:"Sunlight walk" },
+        { kind:"schedule", icon:"📞", label:"Call someone you trust (tonight)",    mins:30, at:"19:30",  cat:"social",   title:"Call a friend" },
+        { kind:"link",     icon:"🧠", label:"Find a therapist (Psychology Today)", url:"https://www.psychologytoday.com/us/therapists" },
+        { kind:"find",     icon:"🌳", label:"Find a park or trail nearby",         query:"park or hiking trail near me" },
+        { kind:"tip",      icon:"💡", label:"One small kind thing for yourself",   text:"Soup. A blanket. A long shower. Something that asks nothing of you." },
+      ],
+    },
+    sick: {
+      cue: /(sick|fever|sore\s+throat|flu|cold|cough|congested|nauseous|throwing\s+up|stomach\s*ache|headache|migraine)/i,
+      empathy: "Take care of yourself. Some practical moves:",
+      options: [
+        { kind:"find",     icon:"🏥", label:"Find urgent care nearby",              query:"urgent care near me" },
+        { kind:"find",     icon:"💊", label:"Find a pharmacy nearby",               query:"24 hour pharmacy near me" },
+        { kind:"link",     icon:"🛵", label:"Soup & supplies delivered (Instacart)", url:"https://www.instacart.com" },
+        { kind:"schedule", icon:"🛏️", label:"Sick day — block tomorrow off",        mins:480, tomorrow:true, atHour:"09:00", cat:"health", title:"Sick day · rest" },
+        { kind:"tip",      icon:"💧", label:"Water + 8 hours sleep",                text:"Hydration + rest does more than people think." },
+      ],
+    },
+    bored: {
+      cue: /(\bbored\b|nothing\s+to\s+do|killing\s+time|need\s+something\s+(to|fun))/i,
+      empathy: "Let's break the spell.",
+      options: [
+        { kind:"find",     icon:"🎨", label:"Find museums & galleries nearby",      query:"free museums and galleries near me" },
+        { kind:"find",     icon:"🥾", label:"Find hiking trails nearby",            query:"hiking trails near me" },
+        { kind:"find",     icon:"🎬", label:"Find indie movie theaters nearby",     query:"indie movie theater near me" },
+        { kind:"link",     icon:"🎫", label:"Local events tonight (Eventbrite)",    url:"https://www.eventbrite.com" },
+        { kind:"schedule", icon:"📖", label:"Read for an hour tonight",             mins:60, at:"21:00",  cat:"personal", title:"Read for pleasure" },
+      ],
+    },
+    sleep: {
+      cue: /(can'?t\s+sleep|insomnia|trouble\s+sleeping|tossing\s+(and|&)\s+turning|kept\s+up\s+all\s+night|wide\s+awake)/i,
+      empathy: "Sleep is rebuildable. Some moves for tonight:",
+      options: [
+        { kind:"schedule", icon:"📵", label:"No-screens block (9pm onwards)",       mins:60, at:"21:00",  cat:"personal", title:"Wind-down · no screens" },
+        { kind:"tip",      icon:"🍵", label:"Chamomile or herbal tea, not coffee",  text:"Caffeine half-life is 6 hours. After 2pm, switch to herbal." },
+        { kind:"link",     icon:"🎧", label:"Calm — sleep stories & sounds",        url:"https://www.calm.com" },
+        { kind:"tip",      icon:"❄️", label:"Cool the room (65–68°F)",              text:"A cooler room helps your body drop into deeper sleep stages." },
+        { kind:"schedule", icon:"🌙", label:"In bed by 10:30 tonight",              mins:30, at:"22:30",  cat:"personal", title:"Lights out" },
+      ],
+    },
+    broke: {
+      cue: /(broke|tight\s+on\s+money|can'?t\s+afford|short\s+on\s+cash|payday|no\s+money|low\s+on\s+funds)/i,
+      empathy: "Free options exist — and they're often the better ones.",
+      options: [
+        { kind:"find",     icon:"📍", label:"Free events near you this week",       query:"free events this week near me" },
+        { kind:"find",     icon:"📚", label:"Public library nearby",                query:"public library near me" },
+        { kind:"find",     icon:"🌳", label:"Free outdoor activities nearby",       query:"free outdoor activities near me" },
+        { kind:"link",     icon:"🍳", label:"Cheap recipes (Budget Bytes)",         url:"https://www.budgetbytes.com" },
+        { kind:"tip",      icon:"💡", label:"Cook one meal in bulk",                text:"One pot of soup = 4–5 lunches. Cheaper, healthier, easier." },
+      ],
+    },
+    energy: {
+      cue: /(need\s+energy|need\s+a\s+boost|feeling\s+sluggish|tired\s+morning|need\s+coffee|caffeine)/i,
+      empathy: "Pick one — quick wins for energy:",
+      options: [
+        { kind:"find",     icon:"☕", label:"Best coffee nearby",                    query:"best rated coffee shop near me" },
+        { kind:"find",     icon:"🥤", label:"Smoothie or juice bar nearby",         query:"smoothie juice bar near me" },
+        { kind:"schedule", icon:"🏃", label:"15-min workout this morning",          mins:15, in:0,        cat:"health",   title:"Quick workout" },
+        { kind:"tip",      icon:"💧", label:"Big glass of water, then sunlight",    text:"You're probably dehydrated. Water + 10 min sun beats caffeine." },
+      ],
+    },
+    breakup: {
+      cue: /(broke\s+up|breakup|dumped|ex\s+(boyfriend|girlfriend|partner)|relationship\s+ended)/i,
+      empathy: "Be very kind to yourself this week. Some ideas:",
+      options: [
+        { kind:"schedule", icon:"📞", label:"Call your closest friend (tonight)",   mins:60, at:"20:00",  cat:"social",   title:"Call my person" },
+        { kind:"schedule", icon:"🏋️", label:"Gym session tomorrow morning",         mins:45, tomorrow:true, atHour:"08:00", cat:"health",   title:"Sweat it out" },
+        { kind:"find",     icon:"🌳", label:"Find a long walking trail",            query:"long walking trail near me" },
+        { kind:"link",     icon:"🍦", label:"Comfort food delivered",               url:"https://www.doordash.com" },
+        { kind:"tip",      icon:"📵", label:"Mute their socials for a month",       text:"Out of sight, out of feed. Healing speeds up." },
+      ],
+    },
+    celebrate: {
+      cue: /(great\s+day|awesome\s+day|good\s+news|got\s+the\s+(job|offer|promotion)|aced|nailed|passed|won|crushed\s+it)/i,
+      empathy: "Yes — mark the moment. A few ways to celebrate:",
+      options: [
+        { kind:"find",     icon:"🍽️", label:"Find a nice restaurant nearby",        query:"highly rated restaurant near me" },
+        { kind:"schedule", icon:"🥂", label:"Dinner with friends this weekend",     mins:120, weekend:true, atHour:"19:00", cat:"social",   title:"Celebration dinner" },
+        { kind:"link",     icon:"🎟️", label:"Local shows tonight (Eventbrite)",    url:"https://www.eventbrite.com" },
+        { kind:"tip",      icon:"📸", label:"Text someone the news",                text:"Joy doubles when shared. Tell the person who'd be proudest." },
+      ],
+    },
+    overworked: {
+      cue: /(working\s+too\s+much|haven'?t\s+stopped|no\s+breaks|need\s+a\s+break|need\s+a\s+vacation|need\s+a\s+day\s+off|need\s+time\s+off)/i,
+      empathy: "Recovery is part of the job. Pick one:",
+      options: [
+        { kind:"schedule", icon:"🌴", label:"Block a personal day next week",       mins:480, tomorrow:false, weekday:1, in:7*1440, atHour:"09:00", cat:"personal", title:"Personal day · OFF" },
+        { kind:"schedule", icon:"🌅", label:"Hard stop at 6pm today",               mins:30, at:"18:00",  cat:"personal", title:"Hard stop · log off" },
+        { kind:"find",     icon:"🏞️", label:"Find a weekend getaway nearby",       query:"weekend getaway destinations near me" },
+        { kind:"tip",      icon:"📵", label:"No work texts after 7pm tonight",      text:"Phone in another room. The world keeps turning." },
+      ],
+    },
+  };
+
+  function detectProblem(text) {
+    if (!text) return null;
+    for (const [id, sug] of Object.entries(SUGGESTIONS)) {
+      if (sug.cue.test(text)) return { id, ...sug };
+    }
+    return null;
+  }
+
+  // Compute a Date for a scheduled suggestion based on its hints
+  function suggestionStart(opt) {
+    const now = new Date();
+    if (opt.at) {
+      // Today at HH:MM, or tomorrow if that time already passed
+      const [h, m] = opt.at.split(":").map(Number);
+      const d = new Date(now);
+      d.setHours(h, m || 0, 0, 0);
+      if (d <= now) d.setDate(d.getDate() + 1);
+      return d;
+    }
+    if (opt.weekend) {
+      const d = new Date(now);
+      const daysToSat = (6 - d.getDay() + 7) % 7 || 7;
+      d.setDate(d.getDate() + daysToSat);
+      const [h, m] = (opt.atHour || "10:00").split(":").map(Number);
+      d.setHours(h, m, 0, 0);
+      return d;
+    }
+    if (opt.tomorrow) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + 1);
+      const [h, m] = (opt.atHour || "09:00").split(":").map(Number);
+      d.setHours(h, m, 0, 0);
+      return d;
+    }
+    if (opt.in != null) {
+      return new Date(now.getTime() + opt.in * 60_000);
+    }
+    return now;
+  }
+
+  function applySuggestion(opt) {
+    if (opt.kind === "find" && opt.query) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(opt.query)}`;
+      window.open(url, "_blank", "noopener");
+    } else if (opt.kind === "link" && opt.url) {
+      window.open(opt.url, "_blank", "noopener");
+    } else if (opt.kind === "tip") {
+      toast(opt.text || opt.label, "ok");
+    } else if (opt.kind === "schedule") {
+      const start = suggestionStart(opt);
+      const end = new Date(start.getTime() + (opt.mins || 60) * 60_000);
+      const result = addEvent({
+        title: opt.title || opt.label,
+        start: toIsoLocal(start),
+        end: toIsoLocal(end),
+        category: opt.cat || "personal",
+        priority: "low",
+      });
+      const when = fromIsoLocal(result.event.start).toLocaleString([], { weekday:"short", hour:"numeric", minute:"2-digit" });
+      toast(`Added "${result.event.title}" — ${when}`, "ok", {
+        label: "Undo",
+        onClick: () => consumeUndo(),
+      });
+    }
+  }
+
+  function buildSuggestionBubbleInner(problem) {
+    const chips = problem.options.map((o, i) => {
+      const meta = o.kind === "find" || o.kind === "link"
+        ? `<span class="suggest-chip-meta">opens in new tab ↗</span>`
+        : o.kind === "schedule"
+          ? `<span class="suggest-chip-meta">adds to calendar</span>`
+          : `<span class="suggest-chip-meta">tip</span>`;
+      return `<button class="suggest-chip" data-testid="suggest-chip" data-pid="${problem.id}" data-oi="${i}">
+        <span class="suggest-chip-icon" aria-hidden="true">${o.icon}</span>
+        <span class="suggest-chip-label">${escapeHtml(o.label)}</span>
+        ${meta}
+      </button>`;
+    }).join("");
+    return `<span class="bubble-eyebrow">sage · ideas</span>
+      <p class="suggestion-empathy">${escapeHtml(problem.empathy)}</p>
+      <div class="suggestion-actions" data-testid="suggestion-actions">${chips}</div>
+      <p class="suggestion-foot">Pick what fits. Nothing is required.</p>`;
+  }
+
+  // Delegated click handler for suggestion chips
+  document.addEventListener("click", (e) => {
+    const chip = e.target.closest(".suggest-chip");
+    if (!chip) return;
+    const problem = SUGGESTIONS[chip.dataset.pid];
+    if (!problem) return;
+    const opt = problem.options[Number(chip.dataset.oi)];
+    if (!opt) return;
+    applySuggestion(opt);
+  });
+
   // ---------- deterministic fallback engine ----------
   function basicEngine(message, now) {
     const lc = message.toLowerCase().trim();
@@ -498,16 +755,40 @@ User: ${message}`;
 
   async function handleMessage(text) {
     const now = new Date();
-    if (FORCE_BASIC) { setMode("basic"); return basicEngine(text, now); }
-    if (state.mode !== "error") {
-      const cloud = await tryCloudEngine(text, now);
-      if (cloud.ok) { setMode("ai"); return applyCloudActions(cloud.parsed); }
+
+    // Wellbeing pass runs alongside event extraction. If the user mentions a
+    // problem ("long day", "stressed", etc.), we'll attach a suggestion to the
+    // result so the chat renders a card with multiple solutions to pick from.
+    const problem = detectProblem(text);
+
+    let result;
+    if (FORCE_BASIC) {
       setMode("basic");
-      const result = basicEngine(text, now);
-      result._fallbackNote = "(AI service unavailable — using basic parser)";
-      return result;
+      result = basicEngine(text, now);
+    } else if (state.mode !== "error") {
+      const cloud = await tryCloudEngine(text, now);
+      if (cloud.ok) {
+        setMode("ai");
+        result = applyCloudActions(cloud.parsed);
+      } else {
+        setMode("basic");
+        result = basicEngine(text, now);
+        result._fallbackNote = "(AI service unavailable — using basic parser)";
+      }
+    } else {
+      result = basicEngine(text, now);
     }
-    return basicEngine(text, now);
+
+    if (problem) {
+      result.suggestion = problem;
+      // If no event was created and the reply is the generic "Got it…", replace
+      // it with the empathy line so the bubble reads coherently.
+      const generic = /^got it\.?/i.test((result.reply || "").trim());
+      if ((!result.created || result.created.length === 0) && generic) {
+        result.reply = problem.empathy;
+      }
+    }
+    return result;
   }
 
   function escapeHtml(s) {
@@ -532,7 +813,16 @@ User: ${message}`;
     const typingEl = addMessage("bot", '<span class="typing"><span></span><span></span><span></span></span>');
     try {
       const result = await handleMessage(text);
-      typingEl.querySelector(".bubble").innerHTML = escapeHtml(result.reply || "Done.");
+      const bubble = typingEl.querySelector(".bubble");
+
+      if (result.suggestion) {
+        // Rich suggestion card replaces the plain reply bubble
+        bubble.className = "bubble bubble--suggestions";
+        bubble.innerHTML = buildSuggestionBubbleInner(result.suggestion);
+      } else {
+        bubble.innerHTML = escapeHtml(result.reply || "Done.");
+      }
+
       const summary = [];
       if (result.created?.length) summary.push(`✓ added ${result.created.length}`);
       if (result.updated?.length) summary.push(`↻ updated ${result.updated.length}`);
@@ -748,14 +1038,30 @@ User: ${message}`;
     let result;
     try { result = await handleMessage(text); }
     catch { result = { reply: "Sorry, something went wrong.", created: [], updated: [], deleted: [], conflicts: [] }; }
-    addMessage("bot", escapeHtml(result.reply || "Done."));
+
+    // If a wellbeing problem was caught, render the rich suggestion bubble in
+    // the side panel and speak a short summary aloud.
+    let spoken = result.reply || "Done.";
+    if (result.suggestion) {
+      const el = document.createElement("div");
+      el.className = "message message--bot";
+      el.innerHTML = `<div class="bubble bubble--suggestions">${buildSuggestionBubbleInner(result.suggestion)}</div>`;
+      messagesEl.appendChild(el);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      const top = result.suggestion.options.slice(0, 3).map(o => o.label.toLowerCase()).join(", or ");
+      spoken = `${result.suggestion.empathy} I dropped a few ideas in the chat — like ${top}.`;
+      flashCapture(`${result.suggestion.options.length} ideas in chat`);
+    } else {
+      addMessage("bot", escapeHtml(result.reply || "Done."));
+    }
+
     if (result.conflicts?.length) result.conflicts.forEach(c => toast(c, "warn"));
     (result.created || []).forEach(e => {
       const when = fromIsoLocal(e.start).toLocaleString([], { weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" });
       flashCapture(`${e.title} — ${when}`);
     });
     if (!voice.inCall) return;
-    speak(result.reply || "Done.", () => { if (voice.inCall && !voice.muted) startListening("call"); });
+    speak(spoken, () => { if (voice.inCall && !voice.muted) startListening("call"); });
   }
   $("mic-btn").addEventListener("click", () => {
     if (!voice.supported) { toast("Voice input isn't supported in this browser.", "err"); return; }
